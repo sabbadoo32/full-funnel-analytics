@@ -24,66 +24,35 @@ app.get('/', (req, res) => {
 });
 
 // -----------------------------------------------------
-// Validation & exploration endpoints
+// Dynamic Query Endpoint
 // -----------------------------------------------------
-
-// Total count of documents
-app.get('/campaigns/count', async (req, res) => {
-  const count = await Campaign.countDocuments();
-  res.json({ totalDocuments: count });
-});
-
-// Earliest and latest Event Dates
-app.get('/campaigns/date-range', async (req, res) => {
-  const earliest = await Campaign.find().sort({ 'Event Date': 1 }).limit(1);
-  const latest = await Campaign.find().sort({ 'Event Date': -1 }).limit(1);
-  res.json({
-    earliestEventDate: earliest[0]?.['Event Date'] || "N/A",
-    latestEventDate: latest[0]?.['Event Date'] || "N/A"
-  });
-});
-
-// Distinct Event Types
-app.get('/campaigns/distinct-event-types', async (req, res) => {
-  const types = await Campaign.distinct('Event Type');
-  res.json({ eventTypes: types });
-});
-
-// -----------------------------------------------------
-// Dynamic per-field summary endpoint
-// -----------------------------------------------------
-
-app.get('/campaigns/summary-field', async (req, res) => {
-  const { field } = req.query;
-
-  if (!field) {
-    return res.status(400).json({ error: "Please provide a 'field' query parameter." });
-  }
-
+app.post('/campaigns/query', async (req, res) => {
   try {
-    const docs = await Campaign.find({ [field]: { $exists: true, $ne: null } });
+    const { filter = {}, groupBy, aggregations = {} } = req.body;
 
-    let total = 0;
-    let countNonNull = 0;
+    const pipeline = [];
 
-    docs.forEach(doc => {
-      const value = Number(doc[field]);
-      if (!isNaN(value)) {
-        total += value;
-        countNonNull++;
-      }
-    });
+    // Apply filter if present
+    if (Object.keys(filter).length > 0) {
+      pipeline.push({ $match: filter });
+    }
 
-    const average = countNonNull ? total / countNonNull : 0;
+    // Build aggregation stage
+    const groupStage = {
+      _id: groupBy ? `$${groupBy}` : null,
+    };
 
-    res.json({
-      field,
-      total,
-      average,
-      countNonNull
-    });
+    for (const [key, agg] of Object.entries(aggregations)) {
+      const [operator, field] = Object.entries(agg)[0];
+      groupStage[key] = { [operator]: `$${field}` };
+    }
+
+    pipeline.push({ $group: groupStage });
+
+    const result = await Campaign.aggregate(pipeline).exec();
+    res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Error summarizing field" });
+    res.status(500).json({ error: 'Error running dynamic query' });
   }
 });
