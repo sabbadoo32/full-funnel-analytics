@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
 const campaignSchema = new mongoose.Schema({}, { strict: false });
-const Campaign = mongoose.model('Campaign', campaignSchema, 'full_funnel');
+const Campaign = mongoose.model('Campaign', campaignSchema, 'full_funnel'); // ← Your collection name
 
 mongoose.connect(MONGO_URI)
   .then(() => {
@@ -23,7 +23,27 @@ app.get('/', (req, res) => {
   res.send('MU API is running!');
 });
 
-// Updated: only query by Event Name
+// 🔎 New: Field explorer route
+app.get('/explore/fields', async (req, res) => {
+  try {
+    const cursor = Campaign.find().cursor();
+    const fieldCounts = {};
+
+    for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
+      const keys = Object.keys(doc.toObject());
+      keys.forEach((key) => {
+        fieldCounts[key] = (fieldCounts[key] || 0) + 1;
+      });
+    }
+
+    res.json(fieldCounts);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error analyzing fields" });
+  }
+});
+
+// Current summary route (only by Event Name)
 app.get('/campaigns/summary', async (req, res) => {
   const { campaign_tag } = req.query;
 
