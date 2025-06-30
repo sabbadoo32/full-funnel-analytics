@@ -1,0 +1,40 @@
+openapi: 3.0.0
+info:
+  title: MU Campaign Metrics API
+  version: 1.0.0
+  description: Access full-funnel campaign metrics from MongoDB via ChatGPT.
+paths:
+  /campaigns/summary:
+    get:
+      summary: Retrieve campaign metrics by tag and date
+      parameters:
+        - name: campaign_tag
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Tracker-formatted campaign row
+          content:
+            application/json:
+              example:
+                Date: '2025-04-24'
+                Campaign Tag: MU Project 3.5
+                Subtag (Audience/Goal): conversion
+                Emails Sent: 400
+                Email Subject(s): We just launched something big.
+                Email Open Rate: 22.0
+                Email Click Rate: 6.0
+                Landing Page(s): https://miunited.org/project35
+                Mobilize RSVPs: 58
+                FB Reach: 1885
+                IG Clicks: 76
+                CTV Impressions: 24400
+                CTV View Rate: 61.2
