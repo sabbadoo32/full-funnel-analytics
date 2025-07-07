@@ -114,8 +114,11 @@
       // Add user message to chat
       this.addMessage(query, 'user');
 
-      // Use the simplified API endpoint path
-      const apiEndpoint = `${this.backendUrl}/api/chat/query`;
+      // Remove trailing slash from backend URL if present
+      const baseUrl = this.backendUrl.endsWith('/') ? this.backendUrl.slice(0, -1) : this.backendUrl;
+      
+      // Construct API endpoint path
+      const apiEndpoint = `${baseUrl}/api/chat/query`;
       
       console.log('Using API endpoint:', apiEndpoint);
 
