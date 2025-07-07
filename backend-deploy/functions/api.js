@@ -5,14 +5,29 @@ const { corsMiddleware } = require('./cors');
 // Initialize OpenAI
 const openai = new OpenAI(process.env.OPENAI_API_KEY);
 
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+// MongoDB connection handling
+let isConnected = false;
+
+const connectToDatabase = async () => {
+  if (isConnected) return;
+
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000
+    });
+    isConnected = true;
+    console.log('Connected to MongoDB');
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw error;
+  }
+};
 
 // Campaign model
-const Campaign = mongoose.model('Campaign', {
+const Campaign = mongoose.models.Campaign || mongoose.model('Campaign', {
   name: String,
   startDate: Date,
   endDate: Date,
@@ -28,6 +43,19 @@ const Campaign = mongoose.model('Campaign', {
 
 // Base handler function
 const baseHandler = async (event, context) => {
+  // Set context.callbackWaitsForEmptyEventLoop to false to prevent function timeout
+  context.callbackWaitsForEmptyEventLoop = false;
+
+  // Connect to MongoDB
+  try {
+    await connectToDatabase();
+  } catch (error) {
+    console.error('Failed to connect to MongoDB:', error);
+    return {
+      statusCode: 502,
+      body: JSON.stringify({ error: 'Database connection failed' })
+    };
+  }
   // Only allow POST requests to /chat/query
   if (event.httpMethod !== 'POST' || !event.path.endsWith('/chat/query')) {
     return {
