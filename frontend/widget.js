@@ -114,11 +114,12 @@
       // Add user message to chat
       this.addMessage(query, 'user');
 
+      // Handle Netlify Functions URL structure
+      const apiEndpoint = this.backendUrl.includes('.netlify/functions/api') ? 
+        `${this.backendUrl}/chat/query` : 
+        `${this.backendUrl}/.netlify/functions/api/chat/query`;
+
       try {
-        // Handle Netlify Functions URL structure
-        const apiEndpoint = this.backendUrl.includes('.netlify/functions/api') ? 
-          `${this.backendUrl}/chat/query` : 
-          `${this.backendUrl}/.netlify/functions/api/chat/query`;
         const response = await axios.post(apiEndpoint, {
           message: query
         });
