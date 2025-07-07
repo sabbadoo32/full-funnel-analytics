@@ -114,24 +114,8 @@
       // Add user message to chat
       this.addMessage(query, 'user');
 
-      // Handle Netlify Functions URL structure
-      let apiEndpoint = this.backendUrl;
-      
-      // Remove trailing slash if present
-      if (apiEndpoint.endsWith('/')) {
-        apiEndpoint = apiEndpoint.slice(0, -1);
-      }
-      
-      // Add the correct path based on whether the URL already includes the Netlify functions path
-      if (apiEndpoint.includes('.netlify/functions/api')) {
-        // If URL already has the Netlify functions path, just add the chat query endpoint
-        if (!apiEndpoint.endsWith('/chat/query')) {
-          apiEndpoint = `${apiEndpoint}/chat/query`;
-        }
-      } else {
-        // If URL doesn't have the Netlify functions path, add the complete path
-        apiEndpoint = `${apiEndpoint}/.netlify/functions/api/chat/query`;
-      }
+      // Use the simplified API endpoint path
+      const apiEndpoint = `${this.backendUrl}/api/chat/query`;
       
       console.log('Using API endpoint:', apiEndpoint);
 
