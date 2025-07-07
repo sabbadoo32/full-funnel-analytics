@@ -66,6 +66,8 @@
     constructor(container) {
       this.container = container;
       this.chatHistory = [];
+      // Get backend URL from data attribute or fallback to default
+      this.backendUrl = container.getAttribute('data-backend-url') || 'http://localhost:3000';
       this.init();
     }
 
@@ -108,7 +110,7 @@
       this.addMessage(query, 'user');
 
       try {
-        const response = await axios.post('http://localhost:3000/chat/query', {
+        const response = await axios.post(`${this.backendUrl}/chat/query`, {
           message: query
         });
 

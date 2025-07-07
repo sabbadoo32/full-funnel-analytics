@@ -32,8 +32,8 @@
 
     <h2>Live Demo</h2>
     <div class="demo-section">
-        <!-- Widget container -->
-        <div id="marketing-analytics-widget"></div>
+        <!-- Widget container with backend URL configuration -->
+        <div id="marketing-analytics-widget" data-backend-url="http://localhost:3000"></div>
         <!-- Widget script -->
         <script src="widget.js"></script>
     </div>
@@ -47,7 +47,8 @@
     </ol>
     <div class="code-block">
         <pre><!-- Copy this code to your Google Site -->
-&lt;div id="marketing-analytics-widget"&gt;&lt;/div&gt;
+&lt;!-- Replace YOUR_BACKEND_URL with your actual backend server URL --&gt;
+&lt;div id="marketing-analytics-widget" data-backend-url="YOUR_BACKEND_URL"&gt;&lt;/div&gt;
 &lt;script src="https://sabbadoo32.github.io/full-funnel/frontend/widget.js"&gt;&lt;/script&gt;</pre>
     </div>
 
