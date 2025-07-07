@@ -133,8 +133,13 @@
           Plotly.newPlot(this.vizEl, visualization.data, visualization.layout);
         }
       } catch (error) {
-        console.error('Error:', error);
-        this.addMessage('Sorry, I encountered an error processing your request.', 'bot');
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          endpoint: apiEndpoint
+        });
+        this.addMessage(`Error: ${error.response?.data?.error || error.message || 'Unknown error'}`, 'bot');
       }
     }
 
