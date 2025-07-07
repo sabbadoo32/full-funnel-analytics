@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { OpenAI } = require('openai');
+const { corsMiddleware } = require('./cors');
 
 // Initialize OpenAI
 const openai = new OpenAI(process.env.OPENAI_API_KEY);
@@ -25,28 +26,12 @@ const Campaign = mongoose.model('Campaign', {
   revenue: Number
 });
 
-// Netlify serverless function handler
-exports.handler = async (event, context) => {
-  // Set CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': 'https://sabbadoo32.github.io',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS'
-  };
-
-  // Handle preflight request
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 204,
-      headers
-    };
-  }
-
+// Base handler function
+const baseHandler = async (event, context) => {
   // Only allow POST requests to /chat/query
   if (event.httpMethod !== 'POST' || !event.path.endsWith('/chat/query')) {
     return {
       statusCode: 404,
-      headers,
       body: JSON.stringify({ error: 'Not found' })
     };
   }
