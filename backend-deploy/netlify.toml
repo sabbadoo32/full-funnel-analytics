@@ -7,18 +7,16 @@
   external_node_modules = ["express"]
   node_bundler = "esbuild"
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "https://sabbadoo32.github.io"
-    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type"
+[[redirects]]
+  from = "/.netlify/functions/api/*"
+  to = "/.netlify/functions/cors-handler"
+  status = 200
+  force = true
+  conditions = { Method = ["OPTIONS"] }
 
 [[redirects]]
-  from = "/*"
+  from = "/.netlify/functions/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
   force = true
-  headers = {Access-Control-Allow-Origin = "https://sabbadoo32.github.io", Access-Control-Allow-Methods = "GET, POST, OPTIONS", Access-Control-Allow-Headers = "Content-Type"}
-  [redirects.conditions]
-    Method = ["GET", "POST", "OPTIONS"]
+  conditions = { Method = ["GET", "POST"] }
