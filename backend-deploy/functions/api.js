@@ -1,11 +1,5 @@
-const express = require('express');
-const serverless = require('serverless-http');
 const mongoose = require('mongoose');
 const { OpenAI } = require('openai');
-const app = express();
-
-// Parse JSON bodies
-app.use(express.json());
 
 // Initialize OpenAI
 const openai = new OpenAI(process.env.OPENAI_API_KEY);
@@ -31,23 +25,34 @@ const Campaign = mongoose.model('Campaign', {
   revenue: Number
 });
 
-// Chat route
-app.post('/chat/query', async (req, res) => {
-  // Handle CORS
-  const origin = req.headers.origin;
-  if (origin === 'https://sabbadoo32.github.io') {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
+// Netlify serverless function handler
+exports.handler = async (event, context) => {
+  // Set CORS headers
+  const headers = {
+    'Access-Control-Allow-Origin': 'https://sabbadoo32.github.io',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+
+  // Handle preflight request
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 204,
+      headers
+    };
   }
 
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(204).send('');
+  // Only allow POST requests to /chat/query
+  if (event.httpMethod !== 'POST' || !event.path.endsWith('/chat/query')) {
+    return {
+      statusCode: 404,
+      headers,
+      body: JSON.stringify({ error: 'Not found' })
+    };
   }
 
   try {
-    const { message } = req.body;
+    const { message } = JSON.parse(event.body);
 
     // Get instructions and columns list
     const instructions = process.env.FUNNEL_INSTRUCTIONS || '';
@@ -69,12 +74,20 @@ app.post('/chat/query', async (req, res) => {
       query = JSON.parse(response);
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
-      return res.status(400).json({ error: 'Invalid query format from AI' });
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Invalid query format from AI' })
+      };
     }
 
     // Validate query is an object
     if (typeof query !== 'object' || query === null) {
-      return res.status(400).json({ error: 'Invalid query format: not an object' });
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Invalid query format: not an object' })
+      };
     }
 
     // Execute MongoDB query
@@ -94,15 +107,20 @@ app.post('/chat/query', async (req, res) => {
       }
     };
 
-    res.json({
-      answer: `Found ${results.length} campaigns matching your query.`,
-      visualization
-    });
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        answer: `Found ${results.length} campaigns matching your query.`,
+        visualization
+      })
+    };
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: 'Internal server error' })
+    };
   }
-});
-
-// Export the serverless handler
-module.exports.handler = serverless(app);
+};
