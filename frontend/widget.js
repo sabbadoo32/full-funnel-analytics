@@ -68,6 +68,11 @@
       this.chatHistory = [];
       // Get backend URL from data attribute or fallback to default
       this.backendUrl = container.getAttribute('data-backend-url') || 'http://localhost:3000';
+      
+      // Ensure HTTPS for non-localhost URLs
+      if (!this.backendUrl.includes('localhost') && this.backendUrl.startsWith('http:')) {
+        this.backendUrl = this.backendUrl.replace('http:', 'https:');
+      }
       this.init();
     }
 
