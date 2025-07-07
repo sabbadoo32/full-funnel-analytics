@@ -115,7 +115,11 @@
       this.addMessage(query, 'user');
 
       try {
-        const response = await axios.post(`${this.backendUrl}/chat/query`, {
+        // Handle Netlify Functions URL structure
+        const apiEndpoint = this.backendUrl.includes('.netlify/functions/api') ? 
+          `${this.backendUrl}/chat/query` : 
+          `${this.backendUrl}/.netlify/functions/api/chat/query`;
+        const response = await axios.post(apiEndpoint, {
           message: query
         });
 
