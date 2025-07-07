@@ -8,15 +8,12 @@
   node_bundler = "esbuild"
 
 [[redirects]]
-  from = "/.netlify/functions/api/*"
-  to = "/.netlify/functions/cors-handler"
-  status = 200
-  force = true
-  conditions = { Method = ["OPTIONS"] }
-
-[[redirects]]
-  from = "/.netlify/functions/api/*"
+  from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
   force = true
-  conditions = { Method = ["GET", "POST"] }
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
