@@ -5,24 +5,30 @@ const { OpenAI } = require('openai');
 const cors = require('cors');
 const app = express();
 
-// CORS headers middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://sabbadoo32.github.io');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  res.header('Access-Control-Max-Age', '86400'); // 24 hours
-  
+// CORS configuration for Netlify Functions
+const corsHandler = (req, res, next) => {
+  // Allow requests from GitHub Pages and potential Google Sites domains
+  const allowedOrigins = ['https://sabbadoo32.github.io'];
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  }
+
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    return res.status(200).json({
-      body: 'OK',
-      statusCode: 200
-    });
+    res.status(204).send('');
+    return;
   }
-  next();
-});
 
-// Parse JSON bodies
+  next();
+};
+
+// Apply CORS and JSON parsing middleware
+app.use(corsHandler);
 app.use(express.json());
 
 // Initialize OpenAI
