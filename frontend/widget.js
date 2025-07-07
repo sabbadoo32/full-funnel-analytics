@@ -115,9 +115,25 @@
       this.addMessage(query, 'user');
 
       // Handle Netlify Functions URL structure
-      const apiEndpoint = this.backendUrl.includes('.netlify/functions/api') ? 
-        `${this.backendUrl}/chat/query` : 
-        `${this.backendUrl}/.netlify/functions/api/chat/query`;
+      let apiEndpoint = this.backendUrl;
+      
+      // Remove trailing slash if present
+      if (apiEndpoint.endsWith('/')) {
+        apiEndpoint = apiEndpoint.slice(0, -1);
+      }
+      
+      // Add the correct path based on whether the URL already includes the Netlify functions path
+      if (apiEndpoint.includes('.netlify/functions/api')) {
+        // If URL already has the Netlify functions path, just add the chat query endpoint
+        if (!apiEndpoint.endsWith('/chat/query')) {
+          apiEndpoint = `${apiEndpoint}/chat/query`;
+        }
+      } else {
+        // If URL doesn't have the Netlify functions path, add the complete path
+        apiEndpoint = `${apiEndpoint}/.netlify/functions/api/chat/query`;
+      }
+      
+      console.log('Using API endpoint:', apiEndpoint);
 
       try {
         const response = await axios.post(apiEndpoint, {
