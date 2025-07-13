@@ -38,7 +38,19 @@ exports.handler = async function(event, context) {
       console.error('MongoDB connection error:', connError.message);
       console.error('Error code:', connError.code);
       console.error('Error name:', connError.name);
-      throw connError;
+      console.error('Full error:', JSON.stringify(connError, null, 2));
+      console.error('Stack trace:', connError.stack);
+      console.error('URI validation:', validation);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: connError.message,
+          code: connError.code,
+          name: connError.name,
+          validation,
+          stack: connError.stack
+        })
+      };
     }
 
     // List collections if connected
