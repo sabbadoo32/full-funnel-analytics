@@ -1,0 +1,40 @@
+[build]
+  base = "backend-deploy"
+  command = "npm install"
+  functions = "functions"
+  publish = "public"
+
+[functions]
+  external_node_modules = ["express", "mongoose", "openai", "cors", "@aws-sdk/credential-providers", "mongodb", "mongodb-client-encryption", "bson", "@mongodb-js/zstd"]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/debug/simple"
+  to = "/.netlify/functions/simple-debug"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/test"
+  to = "/.netlify/functions/test"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  to = "/index.html"
+  status = 200
