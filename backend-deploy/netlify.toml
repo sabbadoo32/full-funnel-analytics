@@ -1,15 +1,29 @@
 [build]
+  base = "backend-deploy"
   command = "npm install"
   functions = "functions"
   publish = "public"
 
 [functions]
-  external_node_modules = ["express"]
+  external_node_modules = ["express", "mongoose", "openai", "cors"]
   node_bundler = "esbuild"
+  included_files = ["functions/config/**"]
+
+[[redirects]]
+  from = "/debug/simple"
+  to = "/.netlify/functions/simple-debug"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/test"
+  to = "/.netlify/functions/test"
   status = 200
   force = true
 
