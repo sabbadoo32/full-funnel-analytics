@@ -5,7 +5,7 @@
   publish = "public"
 
 [functions]
-  external_node_modules = ["express", "mongoose", "openai", "cors"]
+  external_node_modules = ["express", "mongoose", "openai", "cors", "@aws-sdk/credential-providers", "mongodb", "mongodb-client-encryption", "bson", "@mongodb-js/zstd"]
   node_bundler = "esbuild"
   included_files = ["functions/config/**"]
 
