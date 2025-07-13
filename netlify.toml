@@ -10,32 +10,7 @@
   node_version = "20.x"
 
 [[redirects]]
-  from = "/debug/simple"
-  to = "/.netlify/functions/simple-debug"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/test"
-  to = "/.netlify/functions/test"
-  status = 200
-  force = true
-
-[[redirects]]
   from = "/.netlify/functions/*"
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  to = "/index.html"
-  status = 200
