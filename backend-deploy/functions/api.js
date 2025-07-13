@@ -1,139 +1,224 @@
 const mongoose = require('mongoose');
 const { OpenAI } = require('openai');
 const { corsMiddleware } = require('./cors');
+const Campaign = require('./models/campaigns');
 
-// Initialize OpenAI
-const openai = new OpenAI(process.env.OPENAI_API_KEY);
+// Initialize OpenAI with rate limiting
+if (!process.env.API_KEY) {
+  console.error('API_KEY is not set in environment variables');
+  process.exit(1);
+}
 
-// MongoDB connection handling
-let isConnected = false;
+const openai = new OpenAI({ apiKey: process.env.API_KEY });
 
-const connectToDatabase = async () => {
-  if (isConnected) return;
+// Rate limiting setup
+let lastRequestTime = 0;
+const MIN_REQUEST_GAP = 1000; // Minimum 1 second between requests
 
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      bufferCommands: false,
-      serverSelectionTimeoutMS: 5000
-    });
-    isConnected = true;
-    console.log('Connected to MongoDB');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    throw error;
-  }
+// Model configuration
+const MODELS = {
+  primary: 'gpt-4',
+  fallback: 'gpt-3.5-turbo'
 };
 
-// Campaign model
-const Campaign = mongoose.models.Campaign || mongoose.model('Campaign', {
-  name: String,
-  startDate: Date,
-  endDate: Date,
-  budget: Number,
-  platform: String,
-  status: String,
-  impressions: Number,
-  clicks: Number,
-  conversions: Number,
-  spend: Number,
-  revenue: Number
-});
+// Read instructions and columns list from config files
+const fs = require('fs');
+const path = require('path');
 
-// Base handler function
-const baseHandler = async (event, context) => {
-  // Set context.callbackWaitsForEmptyEventLoop to false to prevent function timeout
-  context.callbackWaitsForEmptyEventLoop = false;
+let instructions, columnsList;
 
-  // Connect to MongoDB
-  try {
-    await connectToDatabase();
-  } catch (error) {
-    console.error('Failed to connect to MongoDB:', error);
-    return {
-      statusCode: 502,
-      body: JSON.stringify({ error: 'Database connection failed' })
-    };
+try {
+  const instructionsPath = path.join(__dirname, 'config/funnel-instructions.txt');
+  const columnsPath = path.join(__dirname, 'config/funnel-columns.json');
+  
+  console.log('Config paths:', {
+    instructionsPath,
+    columnsPath,
+    __dirname,
+    exists: {
+      instructions: fs.existsSync(instructionsPath),
+      columns: fs.existsSync(columnsPath)
+    }
+  });
+
+  instructions = fs.readFileSync(instructionsPath, 'utf8');
+  console.log('Instructions loaded:', instructions.substring(0, 100) + '...');
+
+  const columnsContent = fs.readFileSync(columnsPath, 'utf8');
+  console.log('Columns content loaded:', columnsContent.substring(0, 100) + '...');
+  
+  columnsList = JSON.parse(columnsContent);
+  console.log('Columns parsed successfully');
+} catch (error) {
+  console.error('Error loading config files:', error);
+  throw error;
+}
+
+// Helper for rate-limited OpenAI calls
+async function callOpenAI(messages, preferredModel = MODELS.primary) {
+  // Rate limiting
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+  if (timeSinceLastRequest < MIN_REQUEST_GAP) {
+    await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_GAP - timeSinceLastRequest));
   }
-  // Only allow POST requests to /chat/query
-  if (event.httpMethod !== 'POST' || !event.path.endsWith('/chat/query')) {
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: preferredModel,
+      messages: messages,
+      temperature: 0.7
+    });
+    lastRequestTime = Date.now();
+    return response;
+  } catch (error) {
+    if (error.message?.includes('gpt-4') && preferredModel === MODELS.primary) {
+      console.warn('Falling back to GPT-3.5-turbo due to GPT-4 error:', error.message);
+      return callOpenAI(messages, MODELS.fallback);
+    }
+    throw error;
+  }
+}
+
+// Helper to fetch campaign data
+async function fetchCampaignData(query) {
+  try {
+    const data = await Campaign.find(query).lean();
+    return data;
+  } catch (error) {
+    console.error('Error fetching campaign data:', error);
+    throw error;
+  }
+}
+
+// Helper to generate Plotly visualization
+async function generateVisualization(data, analysisVisualization) {
+  try {
+    const messages = [
+      { role: 'system', content: 'You are a data visualization expert. Generate Plotly.js code based on the data and visualization request.' },
+      { role: 'user', content: `Data: ${JSON.stringify(data)}\nVisualization request: ${analysisVisualization}\n\nGenerate ONLY the Plotly.js code as a JavaScript object with data and layout properties.` }
+    ];
+
+    const response = await callOpenAI(messages);
+    return response.choices[0].message.content;
+  } catch (error) {
+    console.error('Error generating visualization:', error);
+    throw error;
+  }
+}
+
+// Main handler function
+async function handler(event, context) {
+  // Apply CORS middleware
+  const response = await corsMiddleware(event, context);
+  if (response) return response;
+
+  // Connect to MongoDB if not connected
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await mongoose.connect(process.env.MONGO_URI, {
+        serverSelectionTimeoutMS: 5000
+      });
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Database connection failed' })
+      };
+    }
+  }
+
+  try {
+    const path = event.path;
+    const method = event.httpMethod;
+
+    // GET /api/campaigns/summary endpoint
+    if (method === 'GET' && path.endsWith('/api/campaigns/summary')) {
+      const { campaign_tag, date } = event.queryStringParameters || {};
+
+      if (!campaign_tag || !date) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'Missing required query params: campaign_tag, date' })
+        };
+      }
+
+      const campaign = await Campaign.findOne({
+        "Campaign Tag": campaign_tag,
+        Date: date
+      }).lean();
+
+      if (!campaign) {
+        return {
+          statusCode: 404,
+          body: JSON.stringify({ error: 'Campaign not found for that tag and date' })
+        };
+      }
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify(campaign)
+      };
+    }
+
+    // POST /api/chat/query endpoint
+    if (method === 'POST' && path.endsWith('/api/chat/query')) {
+      const { message } = JSON.parse(event.body);
+
+      if (!message) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'Message is required' })
+        };
+      }
+
+      // Generate MongoDB query from natural language
+      const queryMessages = [
+        { role: 'system', content: `You are a MongoDB query generator. Use these instructions to understand the data and columns: ${instructions}\n\nAvailable columns: ${JSON.stringify(columnsList)}` },
+        { role: 'user', content: `Generate a MongoDB query object for: ${message}` }
+      ];
+
+      const queryResponse = await callOpenAI(queryMessages);
+      const queryObject = JSON.parse(queryResponse.choices[0].message.content);
+
+      // Fetch data using the generated query
+      const data = await fetchCampaignData(queryObject);
+
+      // Generate analysis messages
+      const analysisMessages = [
+        { role: 'system', content: 'You are a marketing analytics expert. Analyze the data and suggest visualizations.' },
+        { role: 'user', content: `Query: ${message}\n\nData: ${JSON.stringify(data)}\n\nProvide a natural language analysis and suggest a visualization approach.` }
+      ];
+
+      const analysisResponse = await callOpenAI(analysisMessages);
+      const analysis = analysisResponse.choices[0].message.content;
+
+      // Generate visualization
+      const visualization = await generateVisualization(data, analysis);
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          data,
+          analysis,
+          visualization
+        })
+      };
+    }
+
     return {
       statusCode: 404,
       body: JSON.stringify({ error: 'Not found' })
     };
-  }
 
-  try {
-    const { message } = JSON.parse(event.body);
-
-    // Get instructions and columns list
-    const instructions = process.env.FUNNEL_INSTRUCTIONS || '';
-    const columnsList = process.env.FUNNEL_COLUMNS || '[]';
-
-    // Call OpenAI API
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: instructions },
-        { role: 'user', content: `Available columns: ${columnsList}\n\nUser query: ${message}` }
-      ]
-    });
-
-    // Parse OpenAI response
-    const response = completion.choices[0].message.content;
-    let query;
-    try {
-      query = JSON.parse(response);
-    } catch (error) {
-      console.error('Error parsing OpenAI response:', error);
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Invalid query format from AI' })
-      };
-    }
-
-    // Validate query is an object
-    if (typeof query !== 'object' || query === null) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Invalid query format: not an object' })
-      };
-    }
-
-    // Execute MongoDB query
-    const results = await Campaign.find(query);
-
-    // Generate visualization
-    const visualization = {
-      data: [{
-        x: results.map(r => r.name),
-        y: results.map(r => r.revenue),
-        type: 'bar'
-      }],
-      layout: {
-        title: 'Campaign Performance',
-        xaxis: { title: 'Campaign' },
-        yaxis: { title: 'Revenue' }
-      }
-    };
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        answer: `Found ${results.length} campaigns matching your query.`,
-        visualization
-      })
-    };
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error processing request:', error);
     return {
       statusCode: 500,
-      headers,
       body: JSON.stringify({ error: 'Internal server error' })
     };
   }
-};
+}
+
+// Export the handler for Netlify Functions
+exports.handler = handler;
