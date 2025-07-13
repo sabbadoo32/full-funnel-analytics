@@ -1,6 +1,6 @@
 [build]
   base = "backend-deploy"
-  command = "npm install"
+  command = "cp _redirects public/ && npm install"
   functions = "functions"
   publish = "public"
 
