@@ -1,65 +1,51 @@
-const mongoose = require('mongoose');
+const { MongoClient } = require('mongodb');
 
 exports.handler = async function(event, context) {
   console.log('Starting MongoDB connection test...');
   
   try {
-    // Print URI details (safely)
     const uri = process.env.MONGO_URI;
     if (!uri) {
       throw new Error('MONGO_URI is not set');
     }
 
-    // Basic URI validation
-    const validation = {
-      startsWithProtocol: uri.startsWith('mongodb+srv://'),
-      hasUsername: uri.includes('sebastianjames'),
-      hasEncodedAt: uri.includes('%40'),
-      hasHost: uri.includes('.mongodb.net'),
-      hasDatabase: uri.includes('/full_funnel'),
-      hasQueryParams: uri.includes('?retryWrites=true'),
-      totalLength: uri.length
-    };
-
-    console.log('URI validation:', validation);
-
-    // Attempt connection
     console.log('Attempting MongoDB connection...');
-    try {
-      await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 5000,
-        connectTimeoutMS: 5000,
-        socketTimeoutMS: 5000,
-        family: 4,
-        retryWrites: true,
-        w: 'majority'
-      });
-    } catch (connError) {
-      console.error('MongoDB connection error:', connError.message);
-      console.error('Error code:', connError.code);
-      console.error('Error name:', connError.name);
-      console.error('Full error:', JSON.stringify(connError, null, 2));
-      console.error('Stack trace:', connError.stack);
-      console.error('URI validation:', validation);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          error: connError.message,
-          code: connError.code,
-          name: connError.name,
-          validation,
-          stack: connError.stack
-        })
-      };
-    }
+    const client = new MongoClient(uri, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 5000
+    });
 
-    // List collections if connected
-    const collections = await mongoose.connection.db.listCollections().toArray();
-    const collectionNames = collections.map(c => c.name);
-    
-    console.log('Connected successfully. Collections:', collectionNames);
-    
-    await mongoose.connection.close();
+    await client.connect();
+    console.log('Connected successfully!');
+
+    const admin = client.db().admin();
+    const dbs = await admin.listDatabases();
+    console.log('Available databases:', dbs.databases.map(db => db.name));
+
+    await client.close();
+    console.log('Connection closed.');
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true,
+        databases: dbs.databases.map(db => db.name)
+      })
+    };
+  } catch (error) {
+    console.error('Error:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: error.message,
+        code: error.code,
+        name: error.name,
+        stack: error.stack
+      })
+    };
+  }
+
     console.log('Connection closed.');
 
     return {
