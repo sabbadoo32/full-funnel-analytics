@@ -5,7 +5,7 @@ const Campaign = require('../models/Campaign');
 const validateCampaign = require('../middleware/campaignValidation');
 
 const openai = new OpenAI({
-    apiKey: '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'
+    apiKey: process.env.OPENAI_API_KEY
 });
 
 // Helper function to calculate aggregate metrics
