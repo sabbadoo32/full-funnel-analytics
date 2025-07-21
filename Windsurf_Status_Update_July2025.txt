@@ -1,0 +1,47 @@
+🌊 Windsurf: 3D Full-Funnel Integration System  
+Status Update – July 2025
+
+🎯 Purpose
+
+Windsurf is Michigan United’s data integration layer for full-funnel strategy. It merges raw campaign data (social, email, web, CTV, Impactive, Mobilize) into one coherent, analyzable format. The goal is to:
+
+- Map awareness → engagement → conversion pathways across all channels.
+- Validate what campaigns actually move people — not just impressions or clicks.
+- Create actionable, testable feedback loops between comms + organizing.
+
+🔍 Current State
+
+✅ Foundation Built
+- Schema Template Complete: Crosswalks all relevant fields from FB, IG, Email, Mobilize, GA, Impactive, and CTV.
+- Funnel Strategy Locked: Awareness → Engagement → Consideration → Conversion → Advocacy stages mapped per channel.
+- Field Expansion Approved: Tracker fields now allow GA proof, geo-breakouts, CTV segment attribution.
+
+🛠 Prototype Progress
+- Tracker schema is aligned with raw field coverage from all current platforms.
+- Source validation + metric enforcement protocols set (e.g., no unverified engagement rates).
+
+🔲 Remaining Gaps
+- No full campaign test run completed in new format
+- No real-time or automated stitching across platforms yet
+- GA → Mobilize attribution not visualized
+- Impactive + CTV integrations remain untested
+
+🧩 Key Features (in build or planned)
+
+| Feature | Status | Description |
+|--------|--------|-------------|
+| Unified Tracker Schema | ✅ Done | Standardized field list for cross-channel reporting |
+| 3D Funnel Tagging | ✅ Done | Each platform mapped to funnel stage |
+| GA Validation Fields | 🔄 In Progress | Landing page lift, source match fields |
+| CTV Audience Segments | 🔄 In Progress | Age/Gender/Geo breakdown logging |
+| Campaign Journey Maps | ⏳ Pending | Arrows + drop-offs across real pushes |
+| Windsurf Dashboard or Layer | ⏳ Pending | Question: Static report or live dashboard? |
+
+🚀 Plan of Action (Next Steps)
+
+| Step | Owner | Timeline | Notes |
+|------|-------|----------|-------|
+| 1. Pick 1–2 campaigns to test funnel mapping | You | This week | Suggest: Water Justice push or Jobs week |
+| 2. Manually trace user journey across all platforms | Us | Next 5 days | Use Tracker schema + link GA referrer → Mobilize RSVP |
+| 3. Visualize funnel + spike lift | Us | After journey test | Use Plotly (charts or dashboard)
+
