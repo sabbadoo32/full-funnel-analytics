@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - API_KEY=${API_KEY}
+      - PORT=3000
+    volumes:
+      - .:/usr/src/app
+      - ./full_funnel_instructions.txt:/usr/src/app/full_funnel_instructions.txt:ro
+      - ./full_funnel_all_columns_master_list.json:/usr/src/app/full_funnel_all_columns_master_list.json:ro
+      - /usr/src/app/node_modules
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      - mongodb
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - REACT_APP_API_URL=http://api:3000
+    depends_on:
+      - api
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:

@@ -1,9 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const mongoose = require('mongoose');
-
-// Optional: Adjust this to match your real collection name and fields
-const Campaign = mongoose.model('Campaign', new mongoose.Schema({}, { strict: false }));
+const Campaign = require('../models/campaigns');
 
 // GET /campaigns/summary?campaign_tag=MU Project 3.5&date=2025-04-24
 router.get('/summary', async (req, res) => {
