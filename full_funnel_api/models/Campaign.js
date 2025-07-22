@@ -1,4 +1,60 @@
 const mongoose = require('mongoose');
+const {
+  // Email analytics
+  getEmailMetrics,
+  getEmailPerformance,
+  getEmailEngagement,
+  
+  // Social analytics
+  getSocialMetrics,
+  getSocialEngagement,
+  getSocialReach,
+  
+  // Ad analytics
+  getAdMetrics,
+  getAdPerformance,
+  getAdROI,
+  
+  // Web analytics
+  getWebMetrics,
+  getWebEngagement,
+  getWebConversions,
+  
+  // CTV analytics
+  getCTVMetrics,
+  getCTVPreferenceInsights,
+  getCTVPerformanceByDemo,
+  
+  // P2P/F2F analytics
+  getP2PMetrics,
+  getF2FMetrics,
+  getDialerMetrics,
+  getOpenCanvassMetrics,
+  
+  // Demographics analytics
+  getSelfReportedDemographics,
+  getDetailedDemographics,
+  getGeographicMetrics,
+  getContactInfo,
+  getDemographicEngagement,
+  
+  // Event analytics
+  getEventDetails,
+  getEventPerformance,
+  getEventReferrals,
+  
+  // Technical analytics
+  getTechnicalMetrics,
+  getTrafficMetrics,
+  getConversionMetrics,
+  getCustomMetrics,
+  
+  // Testing analytics
+  getTestingMetrics,
+  getEmailTestingMetrics,
+  getAdTestingMetrics,
+  getCustomTestMetrics
+} = require('../helpers');
 
 // Reference schema for tracking user interactions across channels
 const userInteractionSchema = new mongoose.Schema({
@@ -19,178 +75,179 @@ const conversionSchema = new mongoose.Schema({
 });
 
 const campaignSchema = new mongoose.Schema({
-  // Basic Event Info
-  status: String,
-  role: String,
-  eventName: String,
-  eventDate: Date,
-  eventType: String,
-  
-  // Geographic Info
-  congressionalDistrict: String,
-  stateHouseDistrict: String,
-  stateSenateDistrict: String,
-  city: String,
+  // Email fields
+  "Email Address": String,
+  "Subject Line": String,
+  "Opened": { type: Number, default: 0 },
+  "Clicked": { type: Number, default: 0 },
+  "Converted": { type: Number, default: 0 },
 
-  // Demographic Data
-  demographics: {
-    ethnicity: String,
-    language: String,
-    race: String,
-    gender: String,
-    sexualOrientation: String
-  },
+  // Web fields
+  "Average engagement time": { type: Number, default: 0 },
 
-  // Web Analytics
-  webAnalytics: {
-    landingPage: String,
-    firstUserSourceMedium: String,
-    sessions: Number,
-    activeUsers: Number,
-    newUsers: Number,
-    avgEngagementTimePerSession: Number,
-    keyEvents: Number,
-    sessionKeyEventRate: Number,
-    pageViews: Number
-  },
+  // CTV fields
+  "Households": { type: Number, default: 0 },
+  "Impressons per Household": { type: Number, default: 0 },
+  "View-Through Rate": { type: Number, default: 0 },
+  "Hour of day": { type: Number, default: 0 },
+  "In-market & interests": String,
 
-  // Social Media
-  socialMedia: {
-    postId: String,
-    pageId: String,
-    pageName: String,
-    title: String,
-    description: String,
-    durationSec: Number,
-    publishTime: Date,
-    captionType: String,
-    permalink: String,
-    isCrosspost: Boolean,
-    isShare: Boolean,
-    postType: String,
-    engagement: {
-      reactions: Number,
-      comments: Number,
-      shares: Number
-    },
-    video: {
-      secondsViewed: Number,
-      avgSecondsViewed: Number
-    }
-  },
+  // P2P fields
+  "p2p_initial_messages": { type: Number, default: 0 },
+  "p2p_responses": { type: Number, default: 0 },
+  "p2p_opt_outs": { type: Number, default: 0 },
 
-  // Advertising
-  advertising: {
-    estimatedEarningsUSD: Number,
-    adImpressions: Number,
-    uniqueUsers: Number,
-    views: Number,
-    reach: Number,
-    clicks: {
-      total: Number,
-      other: Number,
-      link: Number
-    },
-    cpmUSD: Number,
-    matchedAudiencePhotoClick: Number,
-    negativeFeedback: {
-      hideAll: Number
-    }
-  },
+  // Demographics fields
+  "Age bracket": String,
+  "Gender": String,
 
-  // Email Campaign
-  emailCampaign: {
-    subjectLine: String,
-    variant: String,
-    metrics: {
-      sent: Number,
-      opened: Number,
-      clicked: Number,
-      converted: Number,
-      bounced: Number,
-      unsubscribed: Number
-    }
-  },
+  // Technical fields
+  "Browser": String,
+  "Device Type": String,
+  "OS": String,
+  "Screen Resolution": String,
 
-  // Mobilize Integration
-  mobilize: {
-    rsvps: Number,
-    attendees: Number,
-    eventId: String,
-    sourceEmail: String,  // Reference to the email campaign that led to signup
-    conversionPath: {
-      emailOpened: Boolean,
-      emailClicked: Boolean,
-      landingPageVisited: Boolean,
-      signupCompleted: Boolean,
-      timeToConversion: Number  // Time in minutes from email open to signup
-    }
-  },
+  // Cost fields
+  "Cost per result": { type: Number, default: 0 },
+  "Amount spent (USD)": { type: Number, default: 0 },
 
-  // Revenue Tracking
-  revenue: {
-    total: Number,
-    roas: Number
-  },
+  // Testing fields
+  "Control Visits": { type: Number, default: 0 },
+  "Control Conversions": { type: Number, default: 0 },
+  "Control Revenue": { type: Number, default: 0 },
+  "Variant Visits": { type: Number, default: 0 },
+  "Variant Conversions": { type: Number, default: 0 },
+  "Variant Revenue": { type: Number, default: 0 },
+
+  // Fields aligned with master_list aggregations
+  Status: String,
+  Role: String,
+  "Event Name": String,
+  "Event Type": String,
+  "Event Date": Date,
+  "Congressional District": String,
+  "Self Reported Ethnicity": String,
+  "Self Reported Language": String,
+  "Self Reported Race": String,
+  "State House District": String,
+  "State Senate District": String,
+  "Self Reported Gender": String,
+  "Self Reported Sexual Orientation": String,
+  "Landing page": String,
+  "First user source / medium": String,
+  "Sessions": Number,
+  "Active users": Number,
+  "New users": Number,
+  "Average engagement time per session": Number,
+  "Key events": Number,
+  "Total revenue": Number,
+  "Session key event rate": Number,
+  "Post ID": String,
+  "Page ID": String,
+  "Page name": String,
+  Title: String,
+  Description: String,
+  "Duration (sec)": Number,
+  "Publish time": Date,
+  "Caption type": String,
+  Permalink: String,
+  "Is crosspost": Boolean,
+  "Is share": Boolean,
+  "Post type": String,
+  "Reactions, Comments and Shares": Number,
+  Reactions: Number,
+  Comments: Number,
+  Shares: Number,
+  "Seconds viewed": Number,
+  "Average Seconds viewed": Number,
+  "Estimated earnings (USD)": Number,
+  "Ad impressions": Number,
+  "IMPRESSION:UNIQUE_USERS": Number,
+  Views: Number,
+  Reach: Number,
+  "Total clicks": Number,
+  "Other Clicks": Number,
+  "Link Clicks": Number,
+  "Ad CPM (USD)": Number,
+  "Matched Audience Targeting Consumption (Photo Click)": Number,
+  "Negative feedback from users: Hide all": Number,
+  "Account ID": String,
+  "Account username": String,
+  "Account name": String,
+  Likes: Number,
+  Saves: Number,
+  Follows: Number,
+  "title": String,  // IG title
+  "description": String,  // IG description
+  "Publish Date": Date,  // IG publish date
+  "privacy_setting": String,
+  "impressions": Number,  // IG impressions
+  "clicks": Number,  // IG clicks
+  "seen": Number,
+  "started": Number,
+  "completions": Number,
+  "Impactive Performs": Number,
+  "contact_list_name": String,
+  "p2p_initial_messages": Number,
+  "p2p_follow_ups": Number,
+  "p2p_responses": Number,
+  "p2p_opt_outs": Number,
+  "p2p_messages_remaining": Number,
+  "p2p_needs_attention": Number,
+  "p2p_undelivered": Number,
+  "dialer_calls_connected": Number,
+  "dialer_contacts_connected": Number,
+  "dialer_dropped_call_count": Number,
+
+  // Testing fields
+  "Control Visits": Number,
+  "Control Conversions": Number,
+  "Control Revenue": Number,
+  "Variant Visits": Number,
+  "Variant Conversions": Number,
+  "Variant Revenue": Number,
+  "dialer_report_filled_count": Number,
+  "f2f_initial_messages_sent": Number,
+  "f2f_unique_phones_reached": Number,
+  "f2f_contacts_followed_up_with": Number,
+  "f2f_suggested_contacts_known": Number,
+  "f2f_suggested_contacts_reached": Number,
+  "open_canvass_personal_contact_reports": Number,
+  "open_canvass_campaign_contact_reports": Number,
+  "open_canvass_contact_numbers_provided": Number,
 
   // Cross-channel Tracking
-  crossChannel: {
-    // Track user interactions across all channels
-    interactions: [userInteractionSchema],
-    
-    // Track conversions and their sources
-    conversions: [conversionSchema],
-    
-    // Track relationships between channels
-    channelRelationships: {
-      emailToSocial: [{
-        emailId: String,
-        socialPostId: String,
-        relationshipType: String,  // share, mention, link
-        engagement: Number
-      }],
-      socialToWeb: [{
-        postId: String,
-        landingPage: String,
-        sessions: Number,
-        conversions: Number
-      }],
-      p2pToEmail: [{
-        messageId: String,
-        emailId: String,
-        signups: Number
-      }]
+  interactions: [userInteractionSchema],
+  conversions: [conversionSchema],
+  
+  // Contact History
+  contactHistory: [{
+    contactId: String,
+    channels: [String],  // email, social, p2p, f2f
+    totalTouchpoints: Number,
+    firstContact: Date,
+    lastContact: Date,
+    conversions: [conversionSchema]
+  }],
+
+  // Attribution
+  attribution: {
+    firstTouch: {
+      channel: String,
+      campaign: String,
+      timestamp: Date
     },
-
-    // Unified contact history
-    contactHistory: [{
-      contactId: String,
-      channels: [String],  // email, social, p2p, f2f
-      totalTouchpoints: Number,
-      firstContact: Date,
-      lastContact: Date,
-      conversions: [conversionSchema]
-    }],
-
-    // Attribution tracking
-    attribution: {
-      firstTouch: {
-        channel: String,
-        campaign: String,
-        timestamp: Date
-      },
-      lastTouch: {
-        channel: String,
-        campaign: String,
-        timestamp: Date
-      },
-      touchpoints: [{
-        channel: String,
-        campaign: String,
-        timestamp: Date,
-        weight: Number  // For multi-touch attribution
-      }]
-    }
+    lastTouch: {
+      channel: String,
+      campaign: String,
+      timestamp: Date
+    },
+    touchpoints: [{
+      channel: String,
+      campaign: String,
+      timestamp: Date,
+      weight: Number  // For multi-touch attribution
+    }]
   }
 }, {
   timestamps: true,
@@ -213,57 +270,83 @@ campaignSchema.virtual('districtInfo').get(function() {
 
 // Method to get email performance metrics
 campaignSchema.methods.getEmailPerformance = function() {
-  const metrics = this.emailCampaign.metrics;
   return {
-    ...metrics,
-    openRate: metrics.sent ? (metrics.opened / metrics.sent * 100).toFixed(2) + '%' : '0%',
-    clickRate: metrics.opened ? (metrics.clicked / metrics.opened * 100).toFixed(2) + '%' : '0%',
-    conversionRate: metrics.clicked ? (metrics.converted / metrics.clicked * 100).toFixed(2) + '%' : '0%',
-    bounceRate: metrics.sent ? (metrics.bounced / metrics.sent * 100).toFixed(2) + '%' : '0%',
-    unsubscribeRate: metrics.sent ? (metrics.unsubscribed / metrics.sent * 100).toFixed(2) + '%' : '0%'
+    ...getEmailMetrics(this),
+    ...getEmailPerformance(this),
+    ...getEmailEngagement(this),
+    testing: getEmailTestingMetrics(this)
   };
 };
 
 // Method to get social media engagement metrics
 campaignSchema.methods.getSocialEngagement = function() {
-  const social = this.socialMedia;
-  if (!social) return null;
-  
-  const engagement = social.engagement;
-  const total = engagement.reactions + engagement.comments + engagement.shares;
-  
   return {
-    ...engagement,
-    totalEngagement: total,
-    engagementRate: social.reach ? (total / social.reach * 100).toFixed(2) + '%' : '0%',
-    videoMetrics: social.video || null
+    ...getSocialMetrics(this),
+    ...getSocialEngagement(this),
+    reach: getSocialReach(this)
   };
 };
 
 // Method to get advertising performance
 campaignSchema.methods.getAdPerformance = function() {
-  const ad = this.advertising;
-  if (!ad) return null;
-
   return {
-    ...ad,
-    ctr: ad.clicks.total && ad.impressions ? (ad.clicks.total / ad.impressions * 100).toFixed(2) + '%' : '0%',
-    roi: ad.estimatedEarningsUSD && this.revenue?.total ? 
-      ((this.revenue.total - ad.estimatedEarningsUSD) / ad.estimatedEarningsUSD * 100).toFixed(2) + '%' : '0%'
+    ...getAdMetrics(this),
+    ...getAdPerformance(this),
+    roi: getAdROI(this),
+    testing: getAdTestingMetrics(this)
   };
 };
 
 // Method to get full analytics overview
 campaignSchema.methods.getAnalyticsOverview = function() {
-  const web = this.webAnalytics;
-  if (!web) return null;
-
   return {
-    ...web,
-    userEngagement: {
-      avgTimePerSession: web.avgEngagementTimePerSession,
-      keyEventRate: web.sessionKeyEventRate,
-      newUserRate: web.activeUsers ? (web.newUsers / web.activeUsers * 100).toFixed(2) + '%' : '0%'
+    // Core analytics
+    email: this.getEmailPerformance(),
+    social: this.getSocialEngagement(),
+    ads: this.getAdPerformance(),
+    web: {
+      ...getWebMetrics(this),
+      ...getWebEngagement(this),
+      conversions: getWebConversions(this)
+    },
+    
+    // Specialized analytics
+    ctv: {
+      ...getCTVMetrics(this),
+      preferences: getCTVPreferenceInsights(this),
+      performance: getCTVPerformanceByDemo(this)
+    },
+    p2p: {
+      ...getP2PMetrics(this),
+      f2f: getF2FMetrics(this),
+      dialer: getDialerMetrics(this),
+      canvass: getOpenCanvassMetrics(this)
+    },
+    demographics: {
+      ...getSelfReportedDemographics(this),
+      ...getDetailedDemographics(this),
+      geographic: getGeographicMetrics(this),
+      contact: getContactInfo(this),
+      engagement: getDemographicEngagement(this)
+    },
+    events: {
+      ...getEventDetails(this),
+      ...getEventPerformance(this),
+      referrals: getEventReferrals(this)
+    },
+    
+    // Technical and testing
+    technical: {
+      ...getTechnicalMetrics(this),
+      traffic: getTrafficMetrics(this),
+      conversions: getConversionMetrics(this),
+      custom: getCustomMetrics(this)
+    },
+    testing: {
+      ...getTestingMetrics(this),
+      email: getEmailTestingMetrics(this),
+      ads: getAdTestingMetrics(this),
+      custom: getCustomTestMetrics(this)
     }
   };
 };
