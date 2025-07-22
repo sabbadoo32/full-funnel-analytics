@@ -236,7 +236,7 @@ ${JSON.stringify(formattedData, null, 2)}`;
                     - What patterns exist across geographic regions and event types
                     - How different channels (email, social, ads, p2p) influence each other
                     
-                    Structure your response in exactly two sections:
+                    Structure your response in exactly three sections:
 
                     # Section 1: Key Findings and Recommendations
                     - Clear, direct answer to the user's question
@@ -244,19 +244,31 @@ ${JSON.stringify(formattedData, null, 2)}`;
                     - Actionable recommendations based on the analysis
                     - Use bullet points for clarity
                     
-                    # Section 2: Data Analysis and Methodology
-                    - Show your analytical process
-                    - Cite specific data points (e.g., "metric: value")
-                    - Explain how you found correlations or patterns
-                    - Support all claims with data
-                    - Show your calculations if relevant
+                    # Section 2: Data Sources and Citations
+                    - List all data sources used in the analysis
+                    - For each metric cited, include:
+                      * Exact value and source (e.g., "email.openRate: 25.3% from campaign.emailCampaign.metrics")
+                      * Time period or scope of the data
+                      * Any data quality notes or limitations
+                    - Explain why these specific data points were chosen
+                    - Note any relevant data that was unavailable or insufficient
+                    
+                    # Section 3: Analysis Methodology
+                    - Show your step-by-step analytical process
+                    - Explain your reasoning for each analytical choice
+                    - Detail any calculations or transformations performed
+                    - Discuss alternative approaches considered
+                    - Highlight any assumptions made
+                    - Explain how you validated your findings
                     
                     Remember:
                     1. ANY field can be compared with ANY other field
                     2. Users can ask ANY question about the data
                     3. Always use precise numbers and percentages
                     4. Always explain your methodology
-                    5. If data is missing or insufficient, say so`
+                    5. If data is missing or insufficient, say so
+                    6. Every insight must be supported by specific data points
+                    7. Explain WHY you chose certain metrics over others`
                 },
                 {
                     role: "user",
