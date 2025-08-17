@@ -1,0 +1,56 @@
+Field: _id
+Field: Status
+Field: Role
+Field: Event Name
+Field: Event Date
+Field: Event Type
+Field: Congressional District
+Field: State House District
+Field: State Senate District
+Field: City
+Field: Emails Sent
+Field: Opened
+Field: Clicked
+Field: Converted
+Field: Bounced
+Field: Unsubscribed
+Field: Subject Line
+Field: Variant
+Field: GA Sessions
+Field: Page Views
+Field: Event count
+Field: Active users
+Field: New users
+Field: Average engagement time per session
+Field: Session key event rate
+Field: Conversion Rate
+Field: Leads
+Field: Purchases
+Field: Revenue
+Field: ROAS
+Field: FB Reach
+Field: Facebook reach
+Field: Facebook visits
+Field: Reactions
+Field: Comments
+Field: Shares
+Field: Ad Set Name
+Field: Ad name
+Field: Amount spent (USD)
+Field: Cost per result
+Field: IG Clicks
+Field: Instagram profile visits
+Field: Instagram reach
+Field: Mobilize RSVPs
+Field: p2p_initial_messages
+Field: p2p_follow_ups
+Field: p2p_responses
+Field: p2p_opt_outs
+Field: f2f_initial_messages_sent
+Field: f2f_unique_phones_reached
+Field: f2f_contacts_followed_up_with
+Field: open_canvass_personal_contact_reports
+Field: CTV Impressions
+Field: Completed View
+Field: Cost Per View
+Field: View-Through Rate

@@ -3,28 +3,25 @@ const router = express.Router();
 const { OpenAI } = require('openai');
 const fs = require('fs');
 const path = require('path');
-const Campaign = require('../models/campaigns');
+const Event = require('../models/campaigns');
 
 // Initialize OpenAI with rate limiting
-if (!process.env.API_KEY) {
-  console.error('API_KEY is not set in environment variables');
+if (!process.env.OPENAI_API_KEY) {
+  console.error('OPENAI_API_KEY is not set in environment variables');
   process.exit(1);
 }
 
-const openai = new OpenAI({ apiKey: process.env.API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Rate limiting setup
 let lastRequestTime = 0;
 const MIN_REQUEST_GAP = 1000; // Minimum 1 second between requests
 
-// Model configuration
-const MODELS = {
-  primary: 'gpt-4',
-  fallback: 'gpt-3.5-turbo'
-};
+// Model configuration - matching test script that worked 36 hours ago
+const MODEL = 'gpt-4';
 
 // Helper for rate-limited OpenAI calls
-async function callOpenAI(messages, preferredModel = MODELS.primary) {
+async function callOpenAI(messages) {
   // Rate limiting
   const now = Date.now();
   const timeSinceLastRequest = now - lastRequestTime;
@@ -32,34 +29,166 @@ async function callOpenAI(messages, preferredModel = MODELS.primary) {
     await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_GAP - timeSinceLastRequest));
   }
   
-  try {
-    const completion = await openai.chat.completions.create({
-      model: preferredModel,
-      messages: messages
-    });
-    lastRequestTime = Date.now();
-    return completion;
-  } catch (error) {
-    // If GPT-4 fails and we're not already using fallback, try GPT-3.5
-    if (error.status === 429 && preferredModel === MODELS.primary) {
-      console.log('Falling back to GPT-3.5-turbo due to rate limit');
-      return callOpenAI(messages, MODELS.fallback);
-    }
-    throw error;
-  }
+  const completion = await openai.chat.completions.create({
+    model: MODEL,
+    messages: messages
+  });
+  lastRequestTime = Date.now();
+  return completion;
 }
 
 // Read instructions and columns list once at startup
 const instructions = fs.readFileSync(path.join(__dirname, '../full_funnel_instructions.txt'), 'utf8');
 const columnsList = JSON.parse(fs.readFileSync(path.join(__dirname, '../full_funnel_all_columns_master_list.json'), 'utf8'));
 
+// Helper for generating weekly summaries
+async function generateWeeklySummary(startDate = new Date()) {
+  const endDate = new Date(startDate);
+  const startOfWeek = new Date(startDate);
+  startOfWeek.setDate(startOfWeek.getDate() - 7);
+
+  const weeklyData = await Event.find({
+    budgetStartDate: { $lte: endDate },
+    budgetEndDate: { $gte: startOfWeek }
+  }).lean();
+
+  const prevWeekData = await Event.find({
+    budgetStartDate: { $lte: startOfWeek },
+    budgetEndDate: { $gte: new Date(startOfWeek.getTime() - 7 * 24 * 60 * 60 * 1000)}
+  }).lean();
+
+  // Calculate week-over-week changes
+  const summary = {
+    period: `${startOfWeek.toLocaleDateString()} to ${endDate.toLocaleDateString()}`,
+    metrics: {
+      totalSpend: weeklyData.reduce((sum, item) => sum + (item.campaignBudgetSpent || 0), 0),
+      averageROI: weeklyData.reduce((sum, item) => sum + (item.budgetROI || 0), 0) / weeklyData.length,
+      overBudgetCount: weeklyData.filter(item => (item.budgetVariance || 0) < 0).length
+    },
+    trends: {
+      spendTrend: calculateTrend(weeklyData, prevWeekData, 'campaignBudgetSpent'),
+      roiTrend: calculateTrend(weeklyData, prevWeekData, 'budgetROI')
+    },
+    topPerformers: weeklyData
+      .sort((a, b) => (b.budgetROI || 0) - (a.budgetROI || 0))
+      .slice(0, 3)
+      .map(item => ({
+        category: item.budgetCategory,
+        roi: item.budgetROI,
+        spent: item.campaignBudgetSpent
+      }))
+  };
+
+  return summary;
+}
+
+// Helper for budget forecasting
+async function generateBudgetForecast(months = 3) {
+  const today = new Date();
+  const endDate = new Date(today);
+  endDate.setMonth(today.getMonth() + months);
+
+  // Get historical data for trend analysis
+  const historicalData = await Event.find({
+    budgetStartDate: { $lte: today },
+    budgetEndDate: { $gte: new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000)}
+  }).lean();
+
+  // Calculate trends and patterns
+  const spendingTrend = historicalData.reduce((sum, item) => sum + (item.budgetVariance || 0), 0) / historicalData.length;
+  const roiTrend = historicalData.reduce((sum, item) => sum + (item.budgetROI || 0), 0) / historicalData.length;
+
+  // Generate forecast
+  const forecast = {
+    period: `${today.toLocaleDateString()} to ${endDate.toLocaleDateString()}`,
+    projections: {
+      estimatedSpend: calculateProjectedSpend(historicalData, spendingTrend),
+      projectedROI: roiTrend,
+      riskAreas: identifyRiskAreas(historicalData),
+      opportunities: identifyOpportunities(historicalData)
+    },
+    recommendations: generateRecommendations(historicalData, spendingTrend, roiTrend)
+  };
+
+  return forecast;
+}
+
+// Helper for trend calculation
+function calculateTrend(currentData, previousData, metric) {
+  const currentAvg = currentData.reduce((sum, item) => sum + (item[metric] || 0), 0) / currentData.length;
+  const previousAvg = previousData.reduce((sum, item) => sum + (item[metric] || 0), 0) / previousData.length;
+  const percentChange = ((currentAvg - previousAvg) / previousAvg) * 100;
+
+  return {
+    direction: percentChange > 0 ? 'up' : 'down',
+    percentage: Math.abs(percentChange).toFixed(1),
+    insight: generateTrendInsight(percentChange, metric)
+  };
+}
+
+// Helper for budget calculations
+async function calculateBudgetMetrics(data) {
+  return data.map(item => ({
+    ...item,
+    budgetVariance: (item.campaignBudgetAllocated || 0) - (item.campaignBudgetSpent || 0),
+    budgetROI: item.campaignBudgetSpent ? (item.totalRevenue || 0) / item.campaignBudgetSpent : 0,
+    budgetROAS: item.campaignBudgetSpent ? (item.totalRevenue || 0) / item.campaignBudgetSpent : 0
+  }));
+}
+
+// Helper for budget filtering
+async function applyBudgetFilters(query) {
+  const budgetQuery = {};
+
+  // Handle budget range filters
+  if (query.minBudget) {
+    budgetQuery.campaignBudgetAllocated = { $gte: query.minBudget };
+  }
+  if (query.maxBudget) {
+    budgetQuery.campaignBudgetAllocated = { ...budgetQuery.campaignBudgetAllocated, $lte: query.maxBudget };
+  }
+
+  // Handle budget category filters
+  if (query.budgetCategory) {
+    budgetQuery.budgetCategory = query.budgetCategory;
+  }
+
+  // Handle budget performance filters
+  if (query.minROI) {
+    budgetQuery.budgetROI = { $gte: query.minROI };
+  }
+  if (query.overBudget === true) {
+    budgetQuery.budgetVariance = { $lt: 0 };
+  }
+  if (query.underBudget === true) {
+    budgetQuery.budgetVariance = { $gt: 0 };
+  }
+
+  // Handle date range filters
+  if (query.budgetStartDate) {
+    budgetQuery.budgetStartDate = { $gte: new Date(query.budgetStartDate) };
+  }
+  if (query.budgetEndDate) {
+    budgetQuery.budgetEndDate = { $lte: new Date(query.budgetEndDate) };
+  }
+
+  return budgetQuery;
+}
+
 // Helper to fetch campaign data
 async function fetchCampaignData(query) {
   try {
-    return await Campaign.find(query).lean();
+    console.log('MongoDB Query:', JSON.stringify(query, null, 2));
+    
+    // First try a basic find to verify data access
+    const basicFind = await Event.find({}).limit(1).lean();
+    console.log('Basic find result:', JSON.stringify(basicFind, null, 2));
+    
+    // Then try the actual query
+    return await Event.find(query).lean();
   } catch (error) {
-    console.error('Error fetching campaign data:', error);
-    throw new Error('Failed to fetch campaign data');
+    console.error('Error fetching event data:', error);
+    throw new Error('Failed to fetch event data');
   }
 }
 
@@ -151,7 +280,65 @@ router.post('/query', async (req, res) => {
   }
 
   try {
-    // First, ask GPT to analyze the query and determine data needs
+    // First, ask GPT to analyze the query and identify any needed clarifications
+    const clarificationCompletion = await callOpenAI([
+      {
+        role: "system",
+        content: `You are a friendly, helpful marketing analytics expert for Michigan United (MU). Your goal is to help users understand their campaign performance and suggest improvements, even if they're not familiar with marketing terminology.
+
+When analyzing queries:
+
+Available fields: ${JSON.stringify(columnsList, null, 2)}
+
+If the query needs clarification, respond with a JSON object in this format:
+{
+  "needsClarification": true,
+  "clarificationQuestions": [
+    // Use friendly, practical questions like:
+    "Would you like to focus on TV ads, social media, or all campaigns?",
+    "Should we look at recent performance or a specific time period?",
+    "Are you more interested in what's working well or where we might need improvements?"
+  ],
+  "missingFields": ["field1", "field2"],
+  "context": "A friendly explanation of what would help provide better insights",
+  "suggestions": [
+    // Proactive suggestions based on common patterns, like:
+    "I notice you're asking about campaign performance. I can also show you which channels are giving the best return on investment.",
+    "Would you like to see how this compares to similar campaigns?",
+    "I can highlight any unusual patterns or opportunities I spot in the data."
+  ]
+}
+
+If the query is clear and complete, respond with:
+{
+  "needsClarification": false
+}`
+      },
+      {
+        role: "user",
+        content: message
+      }
+    ]);
+
+    let clarification;
+    try {
+      clarification = JSON.parse(clarificationCompletion.choices[0].message.content);
+      if (clarification.needsClarification) {
+        // Add helpful context to the response
+        return res.json({
+          needsClarification: true,
+          questions: clarification.clarificationQuestions,
+          missingFields: clarification.missingFields,
+          context: clarification.context,
+          suggestions: clarification.suggestions || [],
+          tone: "friendly"
+        });
+      }
+    } catch (parseError) {
+      console.error('Failed to parse clarification check:', parseError);
+    }
+
+    // If no clarification needed, proceed with analysis
     const analysisCompletion = await callOpenAI([
       {
         role: "system",
@@ -192,6 +379,7 @@ DO NOT include any other text, markdown, or formatting. ONLY the JSON object.`
     try {
       // First try to parse the JSON response
       const rawContent = analysisCompletion.choices[0].message.content;
+      console.log('OpenAI Response:', rawContent);
       analysis = JSON.parse(rawContent);
 
       // Validate that we have a proper query object
@@ -221,8 +409,16 @@ DO NOT include any other text, markdown, or formatting. ONLY the JSON object.`
       });
     }
 
-    // Fetch the data based on the analysis
-    const data = await fetchCampaignData(analysis.query);
+    // Log and fetch the data based on the analysis
+    console.log('Generated MongoDB query:', JSON.stringify(analysis.query, null, 2));
+    // Apply budget filters if present
+    const budgetQuery = await applyBudgetFilters(analysis.query);
+    const finalQuery = {
+      ...analysis.query,
+      ...budgetQuery
+    };
+
+    let data = await fetchCampaignData(finalQuery);
 
     if (!data || data.length === 0) {
       return res.json({
@@ -235,11 +431,57 @@ DO NOT include any other text, markdown, or formatting. ONLY the JSON object.`
     // Generate the visualization
     const visualization = await generateVisualization(data, analysis.visualization);
 
-    // Return everything the frontend needs
+    // Calculate budget metrics
+    data = await calculateBudgetMetrics(data);
+
+    // Format data for manager-friendly insights
+    const managerInsights = {
+      summary: {
+        headline: "Quick Overview",
+        keyMetrics: [
+          `Budget Status: ${data.some(d => d.budgetVariance < 0) ? '⚠️ Some campaigns over budget' : '✅ All campaigns within budget'}`,
+          `ROI Leaders: ${data.filter(d => d.budgetROI > 2).length} campaigns exceeding 2x ROI`,
+          `Attention Needed: ${data.filter(d => d.budgetVariance < 0).length} campaigns need review`
+        ],
+        trends: analysis.explanation
+      },
+      actionItems: [
+        // Generate actionable recommendations based on data
+        ...data
+          .filter(d => d.budgetVariance < 0)
+          .map(d => `Review budget allocation for ${d.budgetCategory || 'campaign'}`),
+        ...data
+          .filter(d => d.budgetROI < 1)
+          .map(d => `Evaluate performance strategy for low-ROI ${d.budgetCategory || 'campaign'}`)
+      ],
+      quickActions: [
+        "Show this week's priorities",
+        "Compare channel performance",
+        "Highlight budget risks",
+        "View top performers"
+      ]
+    };
+
+    // Generate weekly summary and forecast if requested
+    let weeklySummary = null;
+    let budgetForecast = null;
+
+    if (analysis.query.includeWeeklySummary) {
+      weeklySummary = await generateWeeklySummary();
+    }
+
+    if (analysis.query.includeForecast) {
+      budgetForecast = await generateBudgetForecast();
+    }
+
+    // Return everything with manager-friendly format
     res.json({
       data: data,
       visualization: visualization,
-      explanation: analysis.explanation
+      explanation: analysis.explanation,
+      managerView: managerInsights,
+      weeklySummary,
+      budgetForecast
     });
 
   } catch (error) {
