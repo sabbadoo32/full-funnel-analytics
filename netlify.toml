@@ -1,18 +1,24 @@
 [build]
-  base = "backend-deploy"
-  command = "cp _redirects public/ && npm install"
-  functions = "functions"
-  publish = "public"
+  base = "."
+  command = "cd frontend && npm install && npm run build"
+  publish = "frontend/build"
 
 [functions]
+  directory = "functions"
   external_node_modules = ["express", "mongoose", "openai", "cors", "@aws-sdk/credential-providers", "mongodb", "mongodb-client-encryption", "bson", "@mongodb-js/zstd"]
   node_bundler = "esbuild"
 
 [build.environment]
-  NODE_VERSION = "20.10.0"
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--legacy-peer-deps"
 
 [[redirects]]
-  from = "/.netlify/functions/*"
+  from = "/api/*"
   to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
   force = true
