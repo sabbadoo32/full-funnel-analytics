@@ -1,0 +1,50 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Full Funnel Analytics API",
+    "description": "API for querying campaign analytics data",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://fullfunnelmu.netlify.app"
+    }
+  ],
+  "paths": {
+    "/chatgpt/query": {
+      "post": {
+        "summary": "Query campaign analytics data",
+        "operationId": "queryCampaigns",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "Natural language query for analytics"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
