@@ -1,6 +1,9 @@
 const { MongoClient } = require('mongodb');
 const { OpenAI } = require('openai');
 
+// Initialize OpenAI with API key
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 // CORS headers for all responses
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -54,58 +57,6 @@ exports.handler = async (event, context) => {
     }
     
     console.log('API key validated successfully');
-
-    // Check if this is the chat/query endpoint
-    const requestPath = event.path;
-    
-    // Debug endpoint to check environment variables
-    if (requestPath.endsWith('/debug')) {
-      let mongoTest = 'Not tested';
-      let mongoError = null;
-      
-      // Test MongoDB connection
-      if (process.env.MONGO_URI) {
-        try {
-          const client = new MongoClient(process.env.MONGO_URI);
-          await client.connect();
-          const db = client.db();
-          const collections = await db.listCollections().toArray();
-          mongoTest = `Connection successful. Found ${collections.length} collections`;
-          await client.close();
-        } catch (err) {
-          mongoTest = 'Connection failed';
-          mongoError = err.message;
-        }
-      }
-      
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          message: 'Debug info',
-          openaiKeyExists: !!process.env.OPENAI_API_KEY,
-          openaiKeyLength: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0,
-          openaiKeyFirstChars: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 10) + '...' : 'none',
-          apiKeyExists: !!process.env.API_KEY,
-          apiKeyLength: process.env.API_KEY ? process.env.API_KEY.length : 0,
-          apiKeyFirstChars: process.env.API_KEY ? process.env.API_KEY.substring(0, 10) + '...' : 'none',
-          mongoUriExists: !!process.env.MONGO_URI,
-          mongoUriFirstChars: process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 20) + '...' : 'none',
-          mongoTest: mongoTest,
-          mongoError: mongoError,
-          path: requestPath,
-          nodeEnv: process.env.NODE_ENV
-        })
-      };
-    }
-    
-    if (!requestPath.endsWith('/chat/query')) {
-      return {
-        statusCode: 404,
-        headers,
-        body: JSON.stringify({ error: 'Endpoint not found' })
-      };
-    }
 
     // Parse the request body with error handling
     let message;
@@ -173,6 +124,7 @@ exports.handler = async (event, context) => {
       // Get database
       db = client.db();
       console.log('MongoDB database accessed successfully');
+      
     } catch (dbError) {
       console.error('MongoDB connection error details:');
       console.error('- Error name:', dbError.name);

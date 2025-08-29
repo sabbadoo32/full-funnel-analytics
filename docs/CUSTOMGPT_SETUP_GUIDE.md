@@ -47,7 +47,7 @@ Note the URL of your deployed API (e.g., `https://full-funnel-analytics.netlify.
    servers:
      - url: https://fullfunnelmu.netlify.app
    paths:
-     /chatgpt/query:
+     /api/chat/query:
        post:
          summary: Query campaign analytics data
          operationId: queryCampaigns
@@ -136,10 +136,10 @@ If the CustomGPT is not connecting to the API:
 
 1. **Check API Endpoint**: Verify the URL is correct and the server is running
    ```bash
-   curl -X POST https://your-deployed-api.netlify.app/chatgpt/query \
+   curl -X POST https://your-deployed-api.netlify.app/api/chat/query \
      -H "Content-Type: application/json" \
      -H "x-api-key: your_api_key_here" \
-     -d '{"query":"Show me email performance"}'
+     -d '{"message":"Show me email performance"}'
    ```
 
 2. **Verify API Key**: Ensure the API key is correctly set in both the backend and CustomGPT
