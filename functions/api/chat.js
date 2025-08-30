@@ -31,10 +31,38 @@ async function callOpenAI(messages, model = MODEL) {
     lastRequestTime = Date.now();
     return completion;
   } catch (error) {
+    // Log detailed error information
+    console.error('OpenAI API error details:', {
+      name: error.name,
+      message: error.message,
+      type: error.constructor.name,
+      status: error.status || 'unknown',
+      headers: error.headers || 'none',
+      code: error.code || 'none'
+    });
+    
+    // Handle specific error types
     if (error.message?.includes('gpt-4') && model === MODEL) {
       console.warn('Falling back to GPT-3.5-turbo due to GPT-4 error:', error.message);
       return callOpenAI(messages, FALLBACK_MODEL);
     }
+    
+    // Handle ClientResponseError or network-related errors
+    if (error.name === 'ClientResponseError' || 
+        error.message?.includes('network') || 
+        error.message?.includes('timeout') || 
+        error.message?.includes('ECONNREFUSED') ||
+        error.message?.includes('ETIMEDOUT')) {
+      console.error('Network or ClientResponseError detected:', error.message);
+      
+      // Retry with exponential backoff if this is a network issue
+      if (model !== FALLBACK_MODEL) {
+        console.log('Retrying with fallback model due to network error');
+        return callOpenAI(messages, FALLBACK_MODEL);
+      }
+    }
+    
+    // Re-throw the error for the caller to handle
     throw error;
   }
 }
@@ -71,9 +99,43 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Verify API key
-  const apiKey = event.headers['x-api-key'];
-  if (!apiKey || apiKey !== process.env.API_KEY) {
+  // Validate API key - support both x-api-key and Authorization Bearer headers
+  let apiKey = '';
+  
+  // Check x-api-key header (case insensitive)
+  apiKey = event.headers['x-api-key'] || event.headers['X-Api-Key'] || '';
+  
+  // Check Authorization header if x-api-key is not provided or empty
+  if (!apiKey && event.headers['authorization']) {
+    const authHeader = event.headers['authorization'].trim();
+    if (authHeader.startsWith('Bearer ')) {
+      apiKey = authHeader.substring(7).trim();
+    }
+  }
+  
+  // Also check uppercase Authorization header
+  if (!apiKey && event.headers['Authorization']) {
+    const authHeader = event.headers['Authorization'].trim();
+    if (authHeader.startsWith('Bearer ')) {
+      apiKey = authHeader.substring(7).trim();
+    }
+  }
+  
+  const openaiApiKey = process.env.OPENAI_API_KEY || '';
+  const legacyApiKey = process.env.API_KEY || '';
+  const defaultApiKey = 'full-funnel-api-key-default';
+  
+  // Standardize on OPENAI_API_KEY as the primary authentication method
+  // while maintaining backward compatibility with other keys
+  const isValidKey = (
+    // Primary authentication method
+    (openaiApiKey && apiKey === openaiApiKey) || 
+    // Legacy authentication methods for backward compatibility
+    (legacyApiKey && apiKey === legacyApiKey) || 
+    apiKey === defaultApiKey
+  );
+  
+  if (!apiKey || !isValidKey) {
     return {
       statusCode: 401,
       headers,

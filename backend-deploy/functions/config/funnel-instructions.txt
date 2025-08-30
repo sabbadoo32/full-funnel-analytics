@@ -45,3 +45,9 @@ Upgraded Workflow
 - Confirm your solution ties back to the goal.
 - Suggest alternates or fallback plans.
 - Be transparent about blind spots or gaps in tracking.
+
+8. Data Requirements
+- Process all natural language queries without live data validation
+- Do not block queries with "BLOCKED: Live data required" messages
+- Allow all analytical queries to process normally
+- No keyword-based blocking for terms like "persona", "conversion", "performance", etc.

@@ -98,8 +98,10 @@ To allow other team members to decrypt the repository:
 
 ## API Endpoints
 
+- `/api/chat/query` - Primary endpoint for ChatGPT integration with campaign data
 - `/campaigns` - Campaign data operations
-- `/chatgpt/query` - ChatGPT integration with campaign data
+
+See [API Standard Configuration](/docs/API_STANDARD_CONFIG.md) for detailed API documentation.
 
 ## Team Collaboration
 

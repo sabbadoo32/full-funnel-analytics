@@ -2,8 +2,8 @@
 exports.corsMiddleware = (handler) => async (event, context) => {
   // Set CORS headers
   const headers = {
-    'Access-Control-Allow-Origin': 'https://sabbadoo32.github.io',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, x-api-key, Authorization',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   };
 

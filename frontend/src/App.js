@@ -40,21 +40,52 @@ function App() {
     setLoading(true);
 
     try {
+      // Use the correct endpoint and port (backend is on 3000)
       const response = await axios.post('http://localhost:3000/chatgpt/query', {
         query: userMessage
       });
 
-      const { data, visualization, explanation } = response.data;
+      // Handle the response format from chatgpt.js
+      const { summary, metrics, insights } = response.data;
       
-      // Add bot response with visualization
-      addMessage(explanation, false, {
-        data: visualization.data,
-        layout: visualization.layout
-      });
+      // Format the response for display
+      let responseText = `${summary}\n\n`;
+      
+      if (insights?.highlightedCampaign) {
+        const { name, date, openRate, clickRate } = insights.highlightedCampaign;
+        responseText += `Best performing campaign: ${name} (${date})\n`;
+        responseText += `Open Rate: ${openRate}, Click Rate: ${clickRate}\n\n`;
+      }
+      
+      if (metrics?.openRate) {
+        responseText += `Average Open Rate: ${(metrics.openRate.average * 100).toFixed(1)}%\n`;
+        responseText += `Best: ${(metrics.openRate.max * 100).toFixed(1)}%, `;
+        responseText += `Worst: ${(metrics.openRate.min * 100).toFixed(1)}%\n\n`;
+      }
+      
+      if (metrics?.clickRate) {
+        responseText += `Average Click Rate: ${(metrics.clickRate.average * 100).toFixed(1)}%\n`;
+        responseText += `Best: ${(metrics.clickRate.max * 100).toFixed(1)}%, `;
+        responseText += `Worst: ${(metrics.clickRate.min * 100).toFixed(1)}%\n\n`;
+      }
+      
+      if (insights?.suggestions?.length) {
+        responseText += 'Suggestions:\n';
+        responseText += insights.suggestions.map(s => `• ${s}`).join('\n');
+      }
+      
+      addMessage(responseText, false);
 
     } catch (error) {
       console.error('Error:', error);
-      addMessage('Sorry, I encountered an error processing your request.', false);
+      let errorMessage = 'Sorry, I encountered an error processing your request.';
+      if (error.response?.data?.error) {
+        errorMessage += `\n\nError: ${error.response.data.error}`;
+        if (error.response.data.details) {
+          errorMessage += `\nDetails: ${error.response.data.details}`;
+        }
+      }
+      addMessage(errorMessage, false);
     } finally {
       setLoading(false);
     }

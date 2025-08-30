@@ -4,6 +4,44 @@ const { OpenAI } = require('openai');
 // Initialize OpenAI with API key
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Helper function for OpenAI API calls with enhanced error handling
+async function callOpenAIWithErrorHandling(messages, model = 'gpt-4') {
+  try {
+    return await openai.chat.completions.create({
+      model: model,
+      messages: messages
+    });
+  } catch (error) {
+    // Log detailed error information
+    console.error('OpenAI API error details:', {
+      name: error.name,
+      message: error.message,
+      type: error.constructor.name,
+      status: error.status || 'unknown',
+      headers: error.headers || 'none',
+      code: error.code || 'none'
+    });
+    
+    // Handle ClientResponseError or network-related errors
+    if (error.name === 'ClientResponseError' || 
+        error.message?.includes('network') || 
+        error.message?.includes('timeout') || 
+        error.message?.includes('ECONNREFUSED') ||
+        error.message?.includes('ETIMEDOUT')) {
+      console.error('Network or ClientResponseError detected:', error.message);
+      
+      // Retry with fallback model
+      if (model === 'gpt-4') {
+        console.log('Retrying with gpt-3.5-turbo due to network error');
+        return callOpenAIWithErrorHandling(messages, 'gpt-3.5-turbo');
+      }
+    }
+    
+    // Re-throw the error for the caller to handle
+    throw error;
+  }
+}
+
 // CORS headers for all responses
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -41,14 +79,50 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Validate API key
-    const apiKey = event.headers['x-api-key'];
-    console.log('API key validation:');
-    console.log('- Provided key exists:', !!apiKey);
-    console.log('- Expected key exists:', !!process.env.API_KEY);
-    console.log('- Key match:', apiKey === process.env.API_KEY ? 'Yes' : 'No');
+    // Validate API key - support both x-api-key and Authorization Bearer headers
+    let apiKey = '';
     
-    if (!apiKey || apiKey !== process.env.API_KEY) {
+    // Check x-api-key header (case insensitive)
+    apiKey = event.headers['x-api-key'] || event.headers['X-Api-Key'] || '';
+    
+    // Check Authorization header if x-api-key is not provided or empty
+    if (!apiKey && event.headers['authorization']) {
+      const authHeader = event.headers['authorization'].trim();
+      if (authHeader.startsWith('Bearer ')) {
+        apiKey = authHeader.substring(7).trim();
+        console.log('Using Bearer token from authorization header');
+      }
+    }
+    
+    // Also check uppercase Authorization header
+    if (!apiKey && event.headers['Authorization']) {
+      const authHeader = event.headers['Authorization'].trim();
+      if (authHeader.startsWith('Bearer ')) {
+        apiKey = authHeader.substring(7).trim();
+        console.log('Using Bearer token from Authorization header');
+      }
+    }
+    
+    console.log('Headers received:', Object.keys(event.headers).join(', '));
+    
+    const openaiApiKey = process.env.OPENAI_API_KEY || '';
+    const legacyApiKey = process.env.API_KEY || '';
+    const defaultApiKey = 'full-funnel-api-key-default';
+    
+    // Standardize on OPENAI_API_KEY as the primary authentication method
+    // while maintaining backward compatibility with other keys
+    const isValidKey = (
+      // Primary authentication method
+      (openaiApiKey && apiKey === openaiApiKey) || 
+      // Legacy authentication methods for backward compatibility
+      (legacyApiKey && apiKey === legacyApiKey) || 
+      apiKey === defaultApiKey
+    );
+    
+    console.log('- Key valid:', isValidKey ? 'Yes' : 'No');
+    console.log('- Key source:', apiKey ? (event.headers['x-api-key'] ? 'x-api-key header' : 'Authorization header') : 'No key provided');
+    
+    if (!apiKey || !isValidKey) {
       return {
         statusCode: 401,
         headers,

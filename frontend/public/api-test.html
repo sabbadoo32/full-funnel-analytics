@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full Funnel API Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .response {
+            margin-top: 30px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .error {
+            border-left: 4px solid #e74c3c;
+        }
+        .loading {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+            color: #7f8c8d;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab.active {
+            background-color: white;
+            border-color: #ddd;
+            color: #3498db;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .sample-queries {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f7fb;
+            border-radius: 4px;
+        }
+        .sample-query {
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #e1edf7;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .sample-query:hover {
+            background-color: #d0e3f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Full Funnel API Test Interface</h1>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="query">Query API</div>
+            <div class="tab" data-tab="config">Configuration</div>
+            <div class="tab" data-tab="help">Help</div>
+        </div>
+        
+        <div class="tab-content active" id="query-tab">
+            <div class="form-group">
+                <label for="message">Query Message:</label>
+                <textarea id="message" placeholder="Enter your query here (e.g., 'Show me email performance metrics for July 2025')"></textarea>
+            </div>
+            
+            <div class="sample-queries">
+                <h3>Sample Queries</h3>
+                <div class="sample-query" data-query="Show me email performance metrics for July 2025">Show me email performance metrics for July 2025</div>
+                <div class="sample-query" data-query="Create customer personas based on campaign data">Create customer personas based on campaign data</div>
+                <div class="sample-query" data-query="Show conversion rates for Chicago events">Show conversion rates for Chicago events</div>
+            </div>
+            
+            <button id="send-query">Send Query</button>
+            
+            <div class="loading" id="loading">
+                <p>Processing query...</p>
+            </div>
+            
+            <div class="response" id="response" style="display: none;">
+                <h3>API Response:</h3>
+                <pre id="response-content"></pre>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="config-tab">
+            <div class="form-group">
+                <label for="api-url">API Endpoint URL:</label>
+                <input type="text" id="api-url" value="https://fullfunnelmu.netlify.app/.netlify/functions/api/chat/query">
+            </div>
+            
+            <div class="form-group">
+                <label for="api-key">API Key (OPENAI_API_KEY):</label>
+                <input type="text" id="api-key" placeholder="Enter your API key">
+            </div>
+            
+            <div class="form-group">
+                <label for="auth-method">Authentication Method:</label>
+                <select id="auth-method">
+                    <option value="x-api-key">x-api-key header</option>
+                    <option value="bearer">Authorization Bearer</option>
+                </select>
+            </div>
+            
+            <button id="save-config">Save Configuration</button>
+        </div>
+        
+        <div class="tab-content" id="help-tab">
+            <h2>How to Use This Tool</h2>
+            <ol>
+                <li>Configure your API endpoint and authentication in the Configuration tab</li>
+                <li>Enter a natural language query in the Query tab</li>
+                <li>Click "Send Query" to test the API connection</li>
+                <li>View the API response below</li>
+            </ol>
+            
+            <h3>Troubleshooting</h3>
+            <ul>
+                <li><strong>401 Unauthorized</strong>: Check your API key in the Configuration tab</li>
+                <li><strong>404 Not Found</strong>: Verify the API endpoint URL</li>
+                <li><strong>Network Error</strong>: Check your internet connection and API endpoint</li>
+            </ul>
+            
+            <h3>About</h3>
+            <p>This tool helps test the Full Funnel Analytics API connection and authentication methods.</p>
+        </div>
+    </div>
+
+    <script>
+        // Store configuration in localStorage
+        function saveConfig() {
+            const config = {
+                apiUrl: document.getElementById('api-url').value,
+                apiKey: document.getElementById('api-key').value,
+                authMethod: document.getElementById('auth-method').value
+            };
+            localStorage.setItem('fullFunnelConfig', JSON.stringify(config));
+            alert('Configuration saved!');
+        }
+        
+        // Load configuration from localStorage
+        function loadConfig() {
+            const configStr = localStorage.getItem('fullFunnelConfig');
+            if (configStr) {
+                const config = JSON.parse(configStr);
+                document.getElementById('api-url').value = config.apiUrl || '';
+                document.getElementById('api-key').value = config.apiKey || '';
+                document.getElementById('auth-method').value = config.authMethod || 'x-api-key';
+            }
+        }
+        
+        // Send query to API
+        async function sendQuery() {
+            const message = document.getElementById('message').value.trim();
+            if (!message) {
+                alert('Please enter a query message');
+                return;
+            }
+            
+            // Get configuration
+            const apiUrl = document.getElementById('api-url').value;
+            const apiKey = document.getElementById('api-key').value;
+            const authMethod = document.getElementById('auth-method').value;
+            
+            if (!apiKey) {
+                alert('Please enter an API key in the Configuration tab');
+                return;
+            }
+            
+            // Show loading indicator
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('response').style.display = 'none';
+            
+            try {
+                // Prepare headers based on authentication method
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                if (authMethod === 'x-api-key') {
+                    headers['x-api-key'] = apiKey;
+                } else {
+                    headers['Authorization'] = `Bearer ${apiKey}`;
+                }
+                
+                // Send request
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ message })
+                });
+                
+                // Parse response
+                const data = await response.json();
+                
+                // Display response
+                const responseContent = document.getElementById('response-content');
+                responseContent.textContent = JSON.stringify(data, null, 2);
+                
+                // Add error class if response contains error
+                const responseElement = document.getElementById('response');
+                if (data.error) {
+                    responseElement.classList.add('error');
+                } else {
+                    responseElement.classList.remove('error');
+                }
+                
+                // Show response
+                responseElement.style.display = 'block';
+            } catch (error) {
+                // Display error
+                const responseContent = document.getElementById('response-content');
+                responseContent.textContent = `Error: ${error.message}`;
+                
+                const responseElement = document.getElementById('response');
+                responseElement.classList.add('error');
+                responseElement.style.display = 'block';
+            } finally {
+                // Hide loading indicator
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        // Tab switching
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => t.classList.remove('active'));
+                    
+                    // Add active class to clicked tab
+                    tab.classList.add('active');
+                    
+                    // Hide all tab content
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Show selected tab content
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+        }
+        
+        // Sample query click handler
+        function setupSampleQueries() {
+            const sampleQueries = document.querySelectorAll('.sample-query');
+            sampleQueries.forEach(query => {
+                query.addEventListener('click', () => {
+                    document.getElementById('message').value = query.getAttribute('data-query');
+                });
+            });
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load saved configuration
+            loadConfig();
+            
+            // Set up event listeners
+            document.getElementById('send-query').addEventListener('click', sendQuery);
+            document.getElementById('save-config').addEventListener('click', saveConfig);
+            
+            // Set up tabs
+            setupTabs();
+            
+            // Set up sample queries
+            setupSampleQueries();
+        });
+    </script>
+</body>
+</html>

@@ -133,29 +133,50 @@ async function handler(event, context) {
   const response = await corsMiddleware(event, context);
   if (response) return response;
 
-  // Check API key authentication
-  const provided = 
-    (event.headers['x-api-key'] || 
-     event.headers['X-Api-Key'] || 
-     event.headers['x-API-key'] || 
-     '').trim();
+  // API key validation - support both x-api-key and Authorization Bearer headers
+  let provided = '';
   
-  // Get the expected API keys from environment variables
-  const legacyApiKey = (process.env.API_KEY || '').trim();
+  // Check x-api-key header
+  if (event.headers['x-api-key']) {
+    provided = event.headers['x-api-key'].trim();
+  }
+  
+  // Check Authorization header if x-api-key is not provided or empty
+  if (!provided && event.headers['authorization']) {
+    const authHeader = event.headers['authorization'].trim();
+    if (authHeader.startsWith('Bearer ')) {
+      provided = authHeader.substring(7).trim();
+    }
+  }
+  
+  // Also check lowercase headers (some clients send lowercase)
+  if (!provided && event.headers['Authorization']) {
+    const authHeader = event.headers['Authorization'].trim();
+    if (authHeader.startsWith('Bearer ')) {
+      provided = authHeader.substring(7).trim();
+    }
+  }
+  
   const openaiApiKey = (process.env.OPENAI_API_KEY || '').trim();
+  const legacyApiKey = (process.env.API_KEY || '').trim();
   const defaultApiKey = 'full-funnel-api-key-default';
-  
-  // Check if the provided key matches any of the valid keys
+
   const isValidKey = (
     (openaiApiKey && provided === openaiApiKey) || 
     (legacyApiKey && provided === legacyApiKey) || 
     provided === defaultApiKey
   );
-  
+
   if (!isValidKey) {
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ error: 'Unauthorized: Invalid API key' })
+    console.log(`Authentication failed. Provided key: ${provided ? provided.substring(0, 5) + '...' : 'none'}`);
+    return { 
+      statusCode: 401, 
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,x-api-key,Authorization'
+      },
+      body: JSON.stringify({ error: 'Unauthorized: Invalid API key' }) 
     };
   }
 
