@@ -16,7 +16,64 @@ full_funnel/
 └── docs/               # Project documentation
 ```
 
-## Setup
+## Secure Environment Setup
+
+This project uses `git-crypt` to securely store sensitive environment variables in version control.
+
+### Prerequisites
+
+1. Install git-crypt:
+   ```bash
+   # macOS
+   brew install git-crypt
+   
+   # Linux
+   sudo apt-get install git-crypt
+   ```
+
+### Setting Up a New Environment
+
+1. Initialize git-crypt (if not already done):
+   ```bash
+   git-crypt init
+   ```
+
+2. Set up your environment:
+   ```bash
+   ./scripts/setup-env.sh [environment]
+   ```
+   Example: `./scripts/setup-env.sh production`
+
+3. Edit the generated `.env.[environment]` file with your actual values.
+
+4. The script will create a symlink from `.env` to your environment file.
+
+### Backing Up Your Encryption Key
+
+After initializing git-crypt, back up your key:
+```bash
+git-crypt export-key ~/git-crypt-key
+```
+
+Store this key securely and never commit it to version control.
+
+### Adding Team Members
+
+To allow other team members to decrypt the repository:
+
+1. Export their public GPG key:
+   ```bash
+   gpg --export --armor user@example.com > user.pub
+   ```
+
+2. Add them to git-crypt:
+   ```bash
+   git-crypt add-gpg-user user@example.com
+   ```
+
+3. Commit and push the changes.
+
+## Development Setup
 
 1. Clone the repository
 2. Install dependencies:

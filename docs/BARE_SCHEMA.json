@@ -1,0 +1,37 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API",
+    "version": "1"
+  },
+  "paths": {
+    "/chatgpt/query": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://fullfunnelmu.netlify.app"
+    }
+  ]
+}

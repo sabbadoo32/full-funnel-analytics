@@ -1,0 +1,61 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Full Funnel Analytics API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://fullfunnelmu.netlify.app"
+    }
+  ],
+  "paths": {
+    "/api/chat/query": {
+      "post": {
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message"],
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "The analytics query in natural language"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
+    }
+  }
+}
