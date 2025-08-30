@@ -1,6 +1,45 @@
 const { MongoClient } = require('mongodb');
 const { OpenAI } = require('openai');
 
+// Helper function for OpenAI API calls with enhanced error handling
+async function callOpenAIWithErrorHandling(messages, model = 'gpt-4') {
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    return await openai.chat.completions.create({
+      model: model,
+      messages: messages
+    });
+  } catch (error) {
+    // Log detailed error information
+    console.error('OpenAI API error details:', {
+      name: error.name,
+      message: error.message,
+      type: error.constructor.name,
+      status: error.status || 'unknown',
+      headers: error.headers || 'none',
+      code: error.code || 'none'
+    });
+    
+    // Handle ClientResponseError or network-related errors
+    if (error.name === 'ClientResponseError' || 
+        error.message?.includes('network') || 
+        error.message?.includes('timeout') || 
+        error.message?.includes('ECONNREFUSED') ||
+        error.message?.includes('ETIMEDOUT')) {
+      console.error('Network or ClientResponseError detected:', error.message);
+      
+      // Retry with fallback model
+      if (model === 'gpt-4') {
+        console.log('Retrying with gpt-3.5-turbo due to network error');
+        return callOpenAIWithErrorHandling(messages, 'gpt-3.5-turbo');
+      }
+    }
+    
+    // Re-throw the error for the caller to handle
+    throw error;
+  }
+}
+
 // CORS headers for all responses
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -39,13 +78,29 @@ exports.handler = async (event, context) => {
     }
 
     // Validate API key
-    const apiKey = event.headers['x-api-key'];
+    const apiKey = event.headers['x-api-key'] || event.headers['X-Api-Key'] || '';
+    const openaiApiKey = process.env.OPENAI_API_KEY || '';
+    const legacyApiKey = process.env.API_KEY || '';
+    const defaultApiKey = 'full-funnel-api-key-default';
+    
     console.log('API key validation:');
     console.log('- Provided key exists:', !!apiKey);
-    console.log('- Expected key exists:', !!process.env.API_KEY);
-    console.log('- Key match:', apiKey === process.env.API_KEY ? 'Yes' : 'No');
+    console.log('- OPENAI_API_KEY exists:', !!openaiApiKey);
+    console.log('- API_KEY exists:', !!legacyApiKey);
     
-    if (!apiKey || apiKey !== process.env.API_KEY) {
+    // Standardize on OPENAI_API_KEY as the primary authentication method
+    // while maintaining backward compatibility with other keys
+    const isValidKey = (
+      // Primary authentication method
+      (openaiApiKey && apiKey === openaiApiKey) || 
+      // Legacy authentication methods for backward compatibility
+      (legacyApiKey && apiKey === legacyApiKey) || 
+      apiKey === defaultApiKey
+    );
+    
+    console.log('- Key valid:', isValidKey ? 'Yes' : 'No');
+    
+    if (!apiKey || !isValidKey) {
       return {
         statusCode: 401,
         headers,
@@ -89,6 +144,7 @@ exports.handler = async (event, context) => {
           apiKeyExists: !!process.env.API_KEY,
           apiKeyLength: process.env.API_KEY ? process.env.API_KEY.length : 0,
           apiKeyFirstChars: process.env.API_KEY ? process.env.API_KEY.substring(0, 10) + '...' : 'none',
+          defaultApiKey: 'full-funnel-api-key-default',
           mongoUriExists: !!process.env.MONGO_URI,
           mongoUriFirstChars: process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 20) + '...' : 'none',
           mongoTest: mongoTest,

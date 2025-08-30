@@ -6,7 +6,7 @@ This guide provides step-by-step instructions for configuring your CustomGPT to 
 
 1. Your backend API must be deployed and accessible via a public URL
 2. You need admin access to the OpenAI platform to modify your CustomGPT
-3. You need your API key from the Full Funnel Analytics system
+3. You need your `OPENAI_API_KEY` for API authentication
 
 ## Step 1: Deploy Your Backend API
 
@@ -34,18 +34,24 @@ Note the URL of your deployed API (e.g., `https://full-funnel-analytics.netlify.
 
    **Authentication:**
    - Authentication Type: API Key
-   - API Key: `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`
+   - API Key: Use your `OPENAI_API_KEY` value
    - Header Name: `x-api-key`
 
    **Schema:**
    ```yaml
-   openapi: 3.0.0
+   openapi: 3.1.0
    info:
      title: Full Funnel Analytics API
      description: API for querying campaign analytics data
      version: 1.0.0
+
    servers:
      - url: https://fullfunnelmu.netlify.app
+
+   # Apply API key globally so the Action always injects it
+   security:
+     - ApiKeyAuth: []
+
    paths:
      /api/chat/query:
        post:
@@ -54,13 +60,12 @@ Note the URL of your deployed API (e.g., `https://full-funnel-analytics.netlify.
          requestBody:
            required: true
            content:
-             application/json:
+             "application/json":
                schema:
                  type: object
-                 required:
-                   - query
+                 required: [message]
                  properties:
-                   query:
+                   message:
                      type: string
                      description: Natural language query for analytics
                    filters:
@@ -80,21 +85,55 @@ Note the URL of your deployed API (e.g., `https://full-funnel-analytics.netlify.
                        city:
                          type: string
          responses:
-           '200':
-             description: Successful response
-             content:
-               application/json:
-                 schema:
-                   type: object
-                   properties:
-                     analysis:
-                       type: string
-                     aggregateMetrics:
-                       type: object
-                     campaigns:
-                       type: array
-                       items:
-                         type: object
+           "200":
+             $ref: "#/components/responses/SuccessJSON"
+           "400":
+             $ref: "#/components/responses/BadRequest"
+           "401":
+             $ref: "#/components/responses/Unauthorized"
+           "500":
+             $ref: "#/components/responses/ServerError"
+
+   components:
+     securitySchemes:
+       ApiKeyAuth:
+         type: apiKey
+         in: header
+         name: x-api-key
+
+     schemas:
+       QueryResponse:
+         type: object
+         properties:
+           message:
+             type: string
+           query:
+             type: string
+           collections:
+             type: array
+             items:
+               type: string
+           sampleData:
+             type: array
+             items:
+               type: object
+               additionalProperties: true
+           status:
+             type: string
+
+     responses:
+       SuccessJSON:
+         description: Successful response
+         content:
+           "application/json":
+             schema:
+               $ref: "#/components/schemas/QueryResponse"
+       BadRequest:
+         description: Bad request
+       Unauthorized:
+         description: Unauthorized
+       ServerError:
+         description: Server error
    ```
 
 3. Replace `https://your-deployed-api.netlify.app` with your actual deployed API URL
@@ -136,13 +175,13 @@ If the CustomGPT is not connecting to the API:
 
 1. **Check API Endpoint**: Verify the URL is correct and the server is running
    ```bash
-   curl -X POST https://your-deployed-api.netlify.app/api/chat/query \
+   curl -X POST https://fullfunnelmu.netlify.app/api/chat/query \
      -H "Content-Type: application/json" \
-     -H "x-api-key: your_api_key_here" \
-     -d '{"message":"Show me email performance"}'
+     -H "x-api-key: YOUR_OPENAI_API_KEY" \
+     -d '{"message":"Show me email performance metrics"}'
    ```
 
-2. **Verify API Key**: Ensure the API key is correctly set in both the backend and CustomGPT
+2. **Verify API Key**: Ensure your `OPENAI_API_KEY` is correctly set in both the backend environment and CustomGPT configuration
 
 3. **Check CORS Settings**: Make sure your API allows requests from the OpenAI domain
    ```javascript
